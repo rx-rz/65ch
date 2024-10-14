@@ -6,6 +6,6 @@ type API struct {
 	router *httprouter.Router
 }
 
-func Init() *API {
-	return &API{router: httprouter.New()}
+func (a *API) InitializeAPI() {
+
 }
