@@ -1,0 +1,11 @@
+### GET request to example server
+POST http://localhost:8080/v1/users
+
+{
+"first_name": "Adeleye",
+"last_name": "Akingbade",
+"email": "akinfreak@gmail.com",
+"password": "hashicorp"
+}
+###
+

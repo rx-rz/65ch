@@ -1,48 +1,34 @@
-package models
+package data
 
 import (
 	"context"
 	"database/sql"
-	"github.com/google/uuid"
 	"time"
 )
-
-type User struct {
-	ID            uuid.UUID `json:"id"`
-	FirstName     string    `json:"firstName"`
-	LastName      string    `json:"lastName"`
-	Email         string    `json:"email"`
-	Activated     bool      `json:"activated"`
-	Bio           string    `json:"bio,omitempty"`
-	Password      password  `json:"-"`
-	ProfilePicUrl string    `json:"profilePicUrl,omitempty"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
-}
-
-type password struct {
-	hash      []byte
-	plainText string
-}
 
 type UserModel struct {
 	DB *sql.DB
 }
+type User struct {
+	ID        string    `db:"id"`
+	Email     string    `db:"email"`
+	Password  string    `db:"password"`
+	FirstName string    `db:"first_name"`
+	LastName  string    `db:"last_name"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
 
 func (m UserModel) Create(user User) error {
-
 	q := `
 	INSERT INTO users (first_name, last_name, email, password_hash)
 	VALUES ($1, $2, $3, $4)
+	RETURNING first_name, last_name , email, created_at
 	`
-	args := []any{user.FirstName, user.LastName, user.Email, user.Password.hash}
+	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.Password}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
 
 }
 

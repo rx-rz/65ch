@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN activated BOOLEAN default false;

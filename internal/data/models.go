@@ -1,4 +1,4 @@
-package models
+package data
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ type Models struct {
 	Users UserModel
 }
 
-func AppModels(db *sql.DB) Models {
+func NewModels(db *sql.DB) Models {
 	return Models{
 		Users: UserModel{DB: db},
 	}

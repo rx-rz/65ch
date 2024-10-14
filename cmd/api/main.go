@@ -1,33 +1,30 @@
 package main
 
 import (
-	"database/sql"
 	_ "github.com/lib/pq"
 	"github.com/rx-rz/65ch/internal/config"
+	"github.com/rx-rz/65ch/internal/rest"
 	"log"
-	"net/http"
 )
 
 func main() {
 	_, err := config.LoadEnvVariables()
+
 	if err != nil {
 		log.Fatal(err)
-	}
-	s := &http.Server{
-		Addr: ":8080",
 	}
 	db, err := config.InitializeDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(db *sql.DB) {
-		err = db.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(db)
-	err = s.ListenAndServe()
+	api := rest.InitializeAPI(db)
+	err = api.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("Error closing the database: %s", err)
+		}
+	}()
 }

@@ -144,3 +144,4 @@ CREATE TABLE article_statistics
     last_updated   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (article_id)
 );
+
