@@ -14,6 +14,7 @@ type Env struct {
 	DbMaxOpenConns int
 	DbMaxIdleConns int
 	DbMaxTimeout   string
+	JwtSecret      string
 }
 
 const (
@@ -33,6 +34,7 @@ func LoadEnvVariables() (Env, error) {
 	e := Env{
 		DbUrl:          getEnv("DB_URL", ""),
 		Port:           getEnv("PORT", DefaultPort),
+		JwtSecret:      getEnv("JWT_SECRET", ""),
 		DbMaxTimeout:   getEnv("DB_MAX_TIMEOUT", DefaultMaxTimeout),
 		Env:            getEnv("ENV", DefaultEnv),
 		DbMaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", DefaultMaxOpenConns),

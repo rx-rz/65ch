@@ -29,6 +29,10 @@ func (api *API) notFoundErrorResponse(w http.ResponseWriter, r *http.Request) {
 	api.errorResponse(w, r, http.StatusNotFound, "The requested resource could not be found", false)
 }
 
+func (api *API) badRequestErrorResponse(w http.ResponseWriter, r *http.Request, message string) {
+	api.errorResponse(w, r, http.StatusBadRequest, message, false)
+}
+
 func (api *API) conflictResponse(w http.ResponseWriter, r *http.Request, message any) {
 	api.errorResponse(w, r, http.StatusConflict, message, true)
 }
