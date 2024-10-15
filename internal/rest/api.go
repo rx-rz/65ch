@@ -1,9 +1,10 @@
 package rest
 
 import (
-	"database/sql"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rx-rz/65ch/internal/config"
 	"github.com/rx-rz/65ch/internal/data"
+	"github.com/rx-rz/65ch/internal/jsonlog"
 	"net/http"
 	"time"
 )
@@ -11,12 +12,14 @@ import (
 type API struct {
 	router *httprouter.Router
 	models data.Models
+	logger *jsonlog.Logger
 }
 
-func InitializeAPI(db *sql.DB) *http.Server {
+func InitializeAPI(cfg *config.Config) *http.Server {
 	api := &API{
 		router: httprouter.New(),
-		models: data.NewModels(db),
+		models: data.NewModels(cfg.DB),
+		logger: cfg.Logger,
 	}
 
 	api.initializeUserRoutes()

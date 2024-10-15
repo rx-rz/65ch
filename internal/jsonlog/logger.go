@@ -1,4 +1,4 @@
-package logger
+package jsonlog
 
 import (
 	"encoding/json"
@@ -49,7 +49,7 @@ func New(out io.Writer, errorFilePath string) (*Logger, error) {
 func (l *Logger) PrintInfo(message string, properties map[string]string) {
 	err := l.print(LevelInfo, message, properties)
 	if err != nil {
-		log.Println("logger failed to initialize correctly")
+		log.Println("jsonlog failed to initialize correctly")
 	}
 
 }
@@ -57,14 +57,14 @@ func (l *Logger) PrintInfo(message string, properties map[string]string) {
 func (l *Logger) PrintError(err error, properties map[string]string) {
 	logError := l.print(LevelError, err.Error(), properties)
 	if logError != nil {
-		log.Println("logger failed to initialize correctly")
+		log.Println("jsonlog failed to initialize correctly")
 	}
 }
 
 func (l *Logger) PrintFatal(err error, properties map[string]string) {
 	logError := l.print(LevelFatal, err.Error(), properties)
 	if logError != nil {
-		log.Println("logger failed to initialize correctly")
+		log.Println("jsonlog failed to initialize correctly")
 	}
 	os.Exit(1)
 }
