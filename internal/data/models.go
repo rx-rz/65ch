@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"github.com/lib/pq"
 )
 
 var (
@@ -12,6 +13,22 @@ var (
 
 type Models struct {
 	Users UserModel
+}
+
+func determineDBError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrRecordNotFound
+	}
+	var dbError *pq.Error
+	errors.As(err, &dbError)
+	switch dbError.Code {
+	case "23505":
+		return ErrEditConflict
+	}
+	return nil
 }
 
 func NewModels(db *sql.DB) Models {

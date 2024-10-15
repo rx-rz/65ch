@@ -28,10 +28,10 @@ func (m UserModel) Create(user User) error {
 	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.Password}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	return m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
-
+	err := m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
+	return determineDBError(err)
 }
-
+	
 //func (m UserModel) Create(user *User) error {
 //	q := `
 //	INSERT INTO users

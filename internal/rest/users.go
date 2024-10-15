@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"errors"
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
 	"github.com/rx-rz/65ch/internal/utils"
@@ -26,9 +28,9 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = v.Struct(user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	validationError := v.Struct(user)
+	if validationError != nil {
+		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
 	hashedPassword, _ := utils.HashPassword(user.Password)
@@ -40,11 +42,18 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = api.models.Users.Create(dbUser)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, data.ErrEditConflict) {
+			api.conflictResponse(w, r, fmt.Sprintf("User with email %s already exists", user.Email))
+			return
+		} else {
+			api.internalServerErrorResponse(w, r, err)
+			return
+		}
+
 	}
 	err = api.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
-		http.Error(w, "error occured", http.StatusInternalServerError)
+		api.internalServerErrorResponse(w, r, err)
 		return
 	}
 
