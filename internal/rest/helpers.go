@@ -1,6 +1,9 @@
 package rest
 
 import (
+	"database/sql"
+	"github.com/rx-rz/65ch/internal/data"
+
 	//"encoding/json"
 	"encoding/json"
 	"errors"
@@ -45,19 +48,31 @@ func (api *API) readJSON(w http.ResponseWriter, r *http.Request, dest any) error
 	return nil
 }
 
-func (api *API) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
-	js, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
+func (api *API) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) {
+	w.Header().Set("Content-Type", "application/json")
 	for k, v := range headers {
 		w.Header()[k] = v
 	}
-	w.Header().Set("Content-Type", "application/json")
+	js, err := json.Marshal(data)
+	if err != nil {
+		api.logger.PrintError(err, nil)
+	}
+
 	w.WriteHeader(status)
 	_, err = w.Write(js)
 	if err != nil {
-		return err
+		api.logger.PrintError(err, nil)
 	}
-	return nil
+}
+
+func (api *API) handleDBError(w http.ResponseWriter, r *http.Request, err error, message string) {
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		api.notFoundErrorResponse(w, r)
+	case errors.Is(err, data.ErrEditConflict):
+		api.errorResponse(w, r, http.StatusConflict, message, false)
+	default:
+		api.internalServerErrorResponse(w, r, err)
+	}
+
 }

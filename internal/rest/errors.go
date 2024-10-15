@@ -18,11 +18,7 @@ func (api *API) errorResponse(w http.ResponseWriter, r *http.Request, status int
 		env = envelope{"status": "error", "message": message}
 	}
 	env = envelope{"status": "fail", "data": message}
-	err := api.writeJSON(w, status, env, nil)
-	if err != nil {
-		api.logError(r, err)
-		w.WriteHeader(500)
-	}
+	api.writeJSON(w, status, env, nil)
 	return
 }
 
