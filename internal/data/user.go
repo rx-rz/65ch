@@ -47,11 +47,23 @@ func (m UserModel) FindByEmail(email string) (*User, error) {
 	return &user, determineDBError(err)
 }
 
+func (m UserModel) FindByID(id string) (*User, error) {
+	var user User
+	q := `
+	SELECT first_name, last_name, email, id, password_hash FROM users WHERE id = $1
+	`
+	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := m.DB.QueryRowContext(ctx, q, id).Scan(args...)
+	return &user, determineDBError(err)
+}
+
 func (m UserModel) UpdateDetails(user *User) (*User, error) {
 	q := `
-UPDATE users SET first_name = $1, last_name = $2, bio = $3, profile_picture_url = $4, activated = $5
-WHERE id = $6
-RETURNING id, first_name, last_name, bio, profile_picture_url, activated
+	UPDATE users SET first_name = $1, last_name = $2, bio = $3, profile_picture_url = $4, activated = $5
+	WHERE id = $6
+	RETURNING id, first_name, last_name, bio, profile_picture_url, activated
 	`
 	args := []any{&user.FirstName, &user.LastName, &user.Bio, &user.ProfilePicUrl, &user.Activated, &user.ID}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -64,11 +76,25 @@ RETURNING id, first_name, last_name, bio, profile_picture_url, activated
 }
 
 func (m UserModel) UpdateEmail(email, newEmail string) error {
-	return nil
+	q := `
+	UPDATE users SET email = $1 where email = $2
+`
+	args := []any{newEmail, email}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := m.DB.ExecContext(ctx, q, args...)
+	return determineDBError(err)
 }
 
 func (m UserModel) UpdatePassword(email, newPassword string) error {
-	return nil
+	q := `
+	UPDATE users SET password_hash = $1 where email = $2
+	`
+	args := []any{newPassword, email}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := m.DB.ExecContext(ctx, q, args...)
+	return determineDBError(err)
 }
 
 //func (m UserModel) Create(user *User) error {

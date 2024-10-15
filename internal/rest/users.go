@@ -16,7 +16,7 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.updateUserDetailsHandler)
 }
 
-type CreateUser struct {
+type CreateUserRequest struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required,min=8"`
 	FirstName string `json:"first_name" validate:"required,min=1"`
@@ -24,12 +24,11 @@ type CreateUser struct {
 }
 
 func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
-	var user CreateUser
+	var user CreateUserRequest
 	v := validator.New()
 	err := api.readJSON(w, r, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		api.badRequestErrorResponse(w, r, err.Error())
 	}
 	validationError := v.Struct(user)
 	if validationError != nil {
@@ -47,28 +46,28 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, data.ErrEditConflict) {
 			api.conflictResponse(w, r, fmt.Sprintf("User with email %s already exists", user.Email))
-			return
+
 		} else {
 			api.internalServerErrorResponse(w, r, err)
-			return
+
 		}
 
 	}
 	err = api.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
 		api.internalServerErrorResponse(w, r, err)
-		return
+
 	}
 
 }
 
-type LoginUser struct {
+type LoginUserRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
 }
 
 func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
-	var user LoginUser
+	var user LoginUserRequest
 
 	err := api.readJSON(w, r, &user)
 	if err != nil {
@@ -79,7 +78,6 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	err = v.Struct(user)
 	if err != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(err))
-		return
 	}
 	dbUser, err := api.models.Users.FindByEmail(user.Email)
 	matches := utils.CheckPasswordHash(user.Password, dbUser.Password)
@@ -99,8 +97,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// pointer types to allow for nil values.
-type UpdateUserDetails struct {
+type UpdateUserDetailsRequest struct {
 	FirstName         *string `json:"first_name"`
 	LastName          *string `json:"last_name"`
 	Bio               *string `json:"bio"`
@@ -110,7 +107,7 @@ type UpdateUserDetails struct {
 }
 
 func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request) {
-	var user UpdateUserDetails
+	var user UpdateUserDetailsRequest
 	v := validator.New()
 	err := api.readJSON(w, r, &user)
 	if err != nil {
@@ -120,7 +117,7 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	if validationError != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 	}
-	dbUser, err := api.models.Users.FindByEmail(user.ID)
+	dbUser, err := api.models.Users.FindByID(user.ID)
 	if err != nil {
 		if errors.Is(err, data.ErrRecordNotFound) {
 			api.notFoundErrorResponse(w, r)
@@ -142,13 +139,50 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	if user.Activated != nil {
 		dbUser.Activated = *user.Activated
 	}
-	userDetails, err := api.models.Users.UpdateDetails(dbUser)
-	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
-		return
-	}
-	err = api.writeJSON(w, http.StatusOK, envelope{"userDetails": userDetails}, nil)
+	updatedUser, err := api.models.Users.UpdateDetails(dbUser)
 	if err != nil {
 		api.internalServerErrorResponse(w, r, err)
 	}
+	err = api.writeJSON(w, http.StatusOK, envelope{"data": map[string]any{
+		"user":   updatedUser,
+		"status": "success",
+	}}, nil)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+
+	}
+}
+
+type UpdateUserEmailRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	NewEmail string `json:"new_email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req UpdateUserEmailRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestErrorResponse(w, r, err.Error())
+	}
+	v := validator.New()
+	validationError := v.Struct(req)
+	if validationError != nil {
+		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+
+	}
+	_, err = api.models.Users.FindByEmail(req.Email)
+	if err != nil {
+		if errors.Is(err, data.ErrRecordNotFound) {
+			api.notFoundErrorResponse(w, r)
+		}
+	}
+	err = api.models.Users.UpdateEmail(req.Email, req.NewEmail)
+	if err != nil {
+		if errors.Is(err, data.ErrEditConflict) {
+			api.conflictResponse(w, r, "A user with provided email already exists")
+		}
+		api.internalServerErrorResponse(w, r, err)
+	}
+	err = api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": map[string]string{"message": "User email updated successfully"}}, nil)
 }

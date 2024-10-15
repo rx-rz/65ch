@@ -23,6 +23,7 @@ func (api *API) errorResponse(w http.ResponseWriter, r *http.Request, status int
 		api.logError(r, err)
 		w.WriteHeader(500)
 	}
+	return
 }
 
 func (api *API) notFoundErrorResponse(w http.ResponseWriter, r *http.Request) {
