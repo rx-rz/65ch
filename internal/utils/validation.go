@@ -19,15 +19,14 @@ func getErrorMessage(err validator.FieldError) string {
 	}
 }
 
-func GetValidationErrors(err error) map[string]string {
-	errorMessages := make(map[string]string)
-
+func GetValidationErrors(err error) []string {
+	var errorMessages []string
 	var validationErrors validator.ValidationErrors
 	errors.As(err, &validationErrors)
 
 	if err != nil {
 		for _, fieldError := range validationErrors {
-			errorMessages[fieldError.Field()] = getErrorMessage(fieldError)
+			errorMessages = append(errorMessages, getErrorMessage(fieldError))
 		}
 	}
 	return errorMessages
