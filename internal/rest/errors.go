@@ -38,6 +38,13 @@ func (api *API) failedValidationResponse(w http.ResponseWriter, r *http.Request,
 	api.errorResponse(w, r, http.StatusUnprocessableEntity, envelope{"errors": errors}, false)
 }
 
+func (api *API) invalidTokenResponse(w http.ResponseWriter, r *http.Request) {
+	api.errorResponse(w, r, http.StatusUnprocessableEntity, "Invalid token provided", false)
+}
+func (api *API) unauthorizedResponse(w http.ResponseWriter, r *http.Request) {
+	api.errorResponse(w, r, http.StatusUnauthorized, "You are not authorised to use this resourece", false)
+}
+
 func (api *API) internalServerErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	api.logError(r, err)
 	api.errorResponse(w, r, http.StatusInternalServerError, "The server encountered a problem and could not process your request", true)

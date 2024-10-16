@@ -2,12 +2,10 @@ package rest
 
 import (
 	"database/sql"
-	"github.com/rx-rz/65ch/internal/data"
-
-	//"encoding/json"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rx-rz/65ch/internal/data"
 	"io"
 	"net/http"
 )
@@ -70,7 +68,7 @@ func (api *API) handleDBError(w http.ResponseWriter, r *http.Request, err error,
 	case errors.Is(err, sql.ErrNoRows):
 		api.notFoundErrorResponse(w, r)
 	case errors.Is(err, data.ErrEditConflict):
-		api.errorResponse(w, r, http.StatusConflict, message, false)
+		api.conflictResponse(w, r, message)
 	default:
 		api.internalServerErrorResponse(w, r, err)
 	}

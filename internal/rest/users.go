@@ -87,7 +87,12 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, err := utils.GenerateToken(map[string]string{
-		"email": user.Email,
+		"email":               user.Email,
+		"id":                  user.ID,
+		"first_name":          user.FirstName,
+		"last_name":           user.LastName,
+		"profile_picture_url": user.ProfilePicUrl,
+		"bio":                 user.Bio,
 	}, os.Getenv("JWT_SECRET"))
 	if err != nil {
 		api.internalServerErrorResponse(w, r, err)
