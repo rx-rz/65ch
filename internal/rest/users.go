@@ -171,12 +171,17 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
-	_, err = api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(req.Email)
 	if err != nil {
 		if errors.Is(err, data.ErrRecordNotFound) {
 			api.notFoundErrorResponse(w, r)
 			return
 		}
+	}
+	matches := utils.CheckPasswordHash(req.Password, user.Password)
+	if !matches {
+		api.badRequestErrorResponse(w, r, "Invalid details provided")
+		return
 	}
 	err = api.models.Users.UpdateEmail(req.Email, req.NewEmail)
 	if err != nil {
