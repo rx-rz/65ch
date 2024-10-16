@@ -1,5 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+ALTER TABLE users ALTER COLUMN profile_picture_url SET DATA TYPE TEXT;
 -- Users Table
 CREATE TABLE users
 (
@@ -10,7 +11,7 @@ CREATE TABLE users
     last_name           VARCHAR(255)        NOT NULL,
     activated           BOOLEAN                  DEFAULT FALSE,
     bio                 TEXT                     DEFAULT 'bio',
-    profile_picture_url VARCHAR(255)             DEFAULT 'https://placehold.co/400?text=U',
+    profile_picture_url TEXT             DEFAULT 'https://placehold.co/400?text=U',
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

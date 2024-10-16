@@ -35,7 +35,7 @@ func (api *API) conflictResponse(w http.ResponseWriter, r *http.Request, message
 }
 
 func (api *API) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors []string) {
-	api.errorResponse(w, r, http.StatusUnprocessableEntity, errors, false)
+	api.errorResponse(w, r, http.StatusUnprocessableEntity, envelope{"errors": errors}, false)
 }
 
 func (api *API) internalServerErrorResponse(w http.ResponseWriter, r *http.Request, err error) {

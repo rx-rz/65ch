@@ -13,8 +13,8 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/users", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.updateUserDetailsHandler)
-	api.router.HandlerFunc(http.MethodPut, "/v1/users/update-email", api.updateUserEmailHandler)
-	api.router.HandlerFunc(http.MethodPut, "/v1/users/update-password", api.updateUserPasswordHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.updateUserEmailHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.updateUserPasswordHandler)
 }
 
 type CreateUserRequest struct {
@@ -72,9 +72,8 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := validator.New()
-	err = v.Struct(req)
-	if err != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(err))
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
@@ -116,8 +115,7 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 		api.badRequestErrorResponse(w, r, err.Error())
 		return
 	}
-	validationError := v.Struct(req)
-	if validationError != nil {
+	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
@@ -141,13 +139,16 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	if req.Activated != nil {
 		user.Activated = *req.Activated
 	}
-	updatedUser, err := api.models.Users.UpdateDetails(user)
+	_, err = api.models.Users.UpdateDetails(user)
 	if err != nil {
 		api.internalServerErrorResponse(w, r, err)
 		return
 	}
 	api.writeJSON(w, http.StatusOK, envelope{"data": map[string]any{
-		"user": updatedUser,
+		"user": map[string]string{
+			"email": user.Email,
+			"id":    user.ID,
+		},
 	}, "status": "success"}, nil)
 
 }
@@ -166,8 +167,7 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := validator.New()
-	validationError := v.Struct(req)
-	if validationError != nil {
+	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
@@ -200,8 +200,7 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	v := validator.New()
-	validationError := v.Struct(req)
-	if validationError != nil {
+	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
