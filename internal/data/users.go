@@ -22,13 +22,19 @@ type User struct {
 	UpdatedAt     time.Time `db:"updated_at"`
 }
 
-func (m UserModel) Create(user User) error {
+func (m UserModel) Create(user *User) error {
 	q := `
 	INSERT INTO users (first_name, last_name, email, password_hash, bio, profile_picture_url)
-	VALUES ($1, $2, $3, $4, COALESCE($5, DEFAULT), COALESCE($6, DEFAULT))
+	VALUES ($1, $2, $3, $4, $5, $6)
 	RETURNING first_name, last_name , email, bio, profile_picture_url, created_at
 	`
-	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.Password, NilIfEmpty(user.Bio), NilIfEmpty(user.ProfilePicUrl)}
+	if user.Bio == "" {
+		user.Bio = "Enter your bio"
+	}
+	if user.ProfilePicUrl == "" {
+		user.ProfilePicUrl = "https://placehold.co/400?text=U"
+	}
+	args := []any{user.FirstName, user.LastName, user.Email, user.Password, user.Bio, user.ProfilePicUrl}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&user.FirstName, &user.LastName, &user.Email, &user.Bio, &user.ProfilePicUrl, &user.CreatedAt)

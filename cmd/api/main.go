@@ -18,6 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	logger.PrintInfo("connecting to db", map[string]string{})
 	db, err := config.InitializeDB()
 	cfg := config.New(db, logger)
 	if err != nil {

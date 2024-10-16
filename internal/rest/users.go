@@ -40,14 +40,16 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hashedPassword, _ := utils.HashPassword(req.Password)
-	user := data.User{
+
+	user := &data.User{
 		Email:         req.Email,
 		Password:      hashedPassword,
 		FirstName:     req.FirstName,
 		LastName:      req.LastName,
-		ProfilePicUrl: req.ProfilePictureUrl,
 		Bio:           req.Bio,
+		ProfilePicUrl: req.ProfilePictureUrl,
 	}
+
 	err = api.models.Users.Create(user)
 	if err != nil {
 		api.handleDBError(w, r, err, "User with provided email already exists")
