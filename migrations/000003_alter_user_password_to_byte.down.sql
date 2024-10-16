@@ -1,1 +1,0 @@
-ALTER TABLE users ALTER COLUMN password_hash SET DATA TYPE bytea USING password_hash::bytea;

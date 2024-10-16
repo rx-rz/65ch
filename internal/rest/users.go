@@ -18,10 +18,12 @@ func (api *API) initializeUserRoutes() {
 }
 
 type CreateUserRequest struct {
-	Email     string `json:"email" validate:"required,email"`
-	Password  string `json:"password" validate:"required,min=8"`
-	FirstName string `json:"first_name" validate:"required,min=1"`
-	LastName  string `json:"last_name" validate:"required,min=1"`
+	Email             string `json:"email" validate:"required,email"`
+	Password          string `json:"password" validate:"required,min=8"`
+	FirstName         string `json:"first_name" validate:"required,min=1"`
+	LastName          string `json:"last_name" validate:"required,min=1"`
+	Bio               string `json:"bio"`
+	ProfilePictureUrl string `json:"profile_picture_url"`
 }
 
 func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,10 +41,12 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	hashedPassword, _ := utils.HashPassword(req.Password)
 	user := data.User{
-		Email:     req.Email,
-		Password:  hashedPassword,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
+		Email:         req.Email,
+		Password:      hashedPassword,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		ProfilePicUrl: req.ProfilePictureUrl,
+		Bio:           req.Bio,
 	}
 	err = api.models.Users.Create(user)
 	if err != nil {

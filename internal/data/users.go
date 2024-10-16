@@ -15,7 +15,7 @@ type User struct {
 	Password      string    `db:"password"`
 	FirstName     string    `db:"first_name"`
 	Bio           string    `db:"bio"`
-	ProfilePicUrl string    `db:"profile_pic_url"`
+	ProfilePicUrl string    `db:"profile_picture_url"`
 	LastName      string    `db:"last_name"`
 	Activated     bool      `db:"activated"`
 	CreatedAt     time.Time `db:"created_at"`
@@ -24,42 +24,41 @@ type User struct {
 
 func (m UserModel) Create(user User) error {
 	q := `
-	INSERT INTO users (first_name, last_name, email, password_hash)
-	VALUES ($1, $2, $3, $4)
-	RETURNING first_name, last_name , email, created_at
+	INSERT INTO users (first_name, last_name, email, password_hash, bio, profile_picture_url)
+	VALUES ($1, $2, $3, $4, COALESCE($5, DEFAULT), COALESCE($6, DEFAULT))
+	RETURNING first_name, last_name , email, bio, profile_picture_url, created_at
 	`
-	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.Password}
+	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.Password, NilIfEmpty(user.Bio), NilIfEmpty(user.ProfilePicUrl)}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
+	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&user.FirstName, &user.LastName, &user.Email, &user.Bio, &user.ProfilePicUrl, &user.CreatedAt)
 	return determineDBError(err)
 }
 
 func (m UserModel) FindByEmail(email string) (*User, error) {
 	var user User
 	q := `
-	SELECT first_name, last_name, email, id, password_hash FROM users WHERE email = $1
+	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url FROM users WHERE email = $1
 	`
-	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, email).Scan(args...)
+	err := m.DB.QueryRowContext(ctx, q, email).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
 	return &user, determineDBError(err)
 }
 
 func (m UserModel) FindByID(id string) (*User, error) {
 	var user User
 	q := `
-	SELECT first_name, last_name, email, id, password_hash FROM users WHERE id = $1
+	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url FROM users WHERE id = $1
 	`
-	args := []any{&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, id).Scan(args...)
+	err := m.DB.QueryRowContext(ctx, q, id).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
 	return &user, determineDBError(err)
 }
 
 func (m UserModel) UpdateDetails(user *User) (*User, error) {
+	var userDetails User
 	q := `
 	UPDATE users SET first_name = $1, last_name = $2, bio = $3, profile_picture_url = $4, activated = $5
 	WHERE id = $6
@@ -68,11 +67,11 @@ func (m UserModel) UpdateDetails(user *User) (*User, error) {
 	args := []any{&user.FirstName, &user.LastName, &user.Bio, &user.ProfilePicUrl, &user.Activated, &user.ID}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, args...).Scan(args...)
+	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&userDetails.ID, &userDetails.FirstName, &userDetails.LastName, &userDetails.Bio, &userDetails.ProfilePicUrl, &userDetails.Activated)
 	if err != nil {
 		return &User{}, determineDBError(err)
 	}
-	return user, nil
+	return &userDetails, nil
 }
 
 func (m UserModel) UpdateEmail(email, newEmail string) error {
@@ -96,11 +95,3 @@ func (m UserModel) UpdatePassword(email, newPassword string) error {
 	_, err := m.DB.ExecContext(ctx, q, args...)
 	return determineDBError(err)
 }
-
-//func (m UserModel) Create(user *User) error {
-//	q := `
-//	INSERT INTO users
-//	VALUES ($1, $2, $3, $4, $5, $6, $7)
-//
-//`
-//}

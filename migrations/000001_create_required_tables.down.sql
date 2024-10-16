@@ -1,147 +1,52 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Remove Article Statistics Table
+DROP TABLE IF EXISTS article_statistics;
 
--- Users Table
-CREATE TABLE users
-(
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email               VARCHAR(255) UNIQUE NOT NULL,
-    password_hash       VARCHAR(255) NOT NULL,
-    name                VARCHAR(100),
-    bio                 TEXT,
-    profile_picture_url VARCHAR(255),
-    created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Remove Article Categories (Many-to-Many Relationship) Table
+DROP TABLE IF EXISTS article_categories;
 
--- Index for email to speed up lookups
-CREATE INDEX idx_users_email ON users(email);
+-- Remove Categories Table
+DROP TABLE IF EXISTS categories;
 
--- Articles Table
-CREATE TABLE articles
-(
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    author_id    UUID REFERENCES users(id),
-    title        VARCHAR(255) NOT NULL,
-    content      TEXT,
-    status       VARCHAR(20) CHECK (status IN ('draft', 'published', 'archived')) DEFAULT 'draft',
-    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    published_at TIMESTAMP WITH TIME ZONE
-);
+-- Remove Notifications Table
+DROP TABLE IF EXISTS notifications;
 
--- Index for author_id and status
-CREATE INDEX idx_articles_author_id ON articles(author_id);
-CREATE INDEX idx_articles_status ON articles(status);
+-- Remove Saved Articles Table
+DROP TABLE IF EXISTS saved_articles;
 
--- Tags Table
-CREATE TABLE tags
-(
-    id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(50) UNIQUE NOT NULL
-);
+-- Remove Followers Table
+DROP TABLE IF EXISTS followers;
 
--- Index for tag name
-CREATE INDEX idx_tags_name ON tags(name);
+-- Remove Likes Table
+DROP TABLE IF EXISTS likes;
 
--- Article Tags (Many-to-Many Relationship)
-CREATE TABLE article_tags
-(
-    article_id UUID REFERENCES articles(id),
-    tag_id     UUID REFERENCES tags(id),
-    PRIMARY KEY (article_id, tag_id)
-);
+-- Remove Comments Table
+DROP TABLE IF EXISTS comments;
 
--- Comments Table
-CREATE TABLE comments
-(
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    article_id UUID REFERENCES articles(id),
-    user_id    UUID REFERENCES users(id),
-    content    TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Remove Article Tags (Many-to-Many Relationship) Table
+DROP TABLE IF EXISTS article_tags;
 
--- Index for article_id and user_id in comments
-CREATE INDEX idx_comments_article_id ON comments(article_id);
-CREATE INDEX idx_comments_user_id ON comments(user_id);
+-- Remove Tags Table
+DROP TABLE IF EXISTS tags;
 
--- Likes Table
-CREATE TABLE likes
-(
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    article_id UUID REFERENCES articles(id),
-    user_id    UUID REFERENCES users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (article_id, user_id)
-);
+-- Remove Articles Table
+DROP TABLE IF EXISTS articles;
 
--- Index for article_id and user_id in likes
-CREATE INDEX idx_likes_article_id ON likes(article_id);
-CREATE INDEX idx_likes_user_id ON likes(user_id);
+-- Remove Users Table
+DROP TABLE IF EXISTS users;
 
--- Followers Table
-CREATE TABLE followers
-(
-    follower_id UUID REFERENCES users(id),
-    followed_id UUID REFERENCES users(id),
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (follower_id, followed_id)
-);
+-- Drop all indexes created
+DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_articles_author_id;
+DROP INDEX IF EXISTS idx_articles_status;
+DROP INDEX IF EXISTS idx_tags_name;
+DROP INDEX IF EXISTS idx_comments_article_id;
+DROP INDEX IF EXISTS idx_comments_user_id;
+DROP INDEX IF EXISTS idx_likes_article_id;
+DROP INDEX IF EXISTS idx_likes_user_id;
+DROP INDEX IF EXISTS idx_saved_articles_user_id;
+DROP INDEX IF EXISTS idx_saved_articles_article_id;
+DROP INDEX IF EXISTS idx_notifications_user_id;
+DROP INDEX IF EXISTS idx_categories_name;
 
--- Saved Articles Table
-CREATE TABLE saved_articles
-(
-    user_id    UUID REFERENCES users(id),
-    article_id UUID REFERENCES articles(id),
-    saved_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, article_id)
-);
-
--- Index for user_id and article_id in saved_articles
-CREATE INDEX idx_saved_articles_user_id ON saved_articles(user_id);
-CREATE INDEX idx_saved_articles_article_id ON saved_articles(article_id);
-
--- Notifications Table
-CREATE TABLE notifications
-(
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID REFERENCES users(id),
-    type       VARCHAR(50) NOT NULL,
-    content    TEXT NOT NULL,
-    is_read    BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Index for user_id in notifications
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-
--- Categories Table
-CREATE TABLE categories
-(
-    id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) UNIQUE NOT NULL
-);
-
--- Index for category name
-CREATE INDEX idx_categories_name ON categories(name);
-
--- Article Categories (Many-to-Many Relationship)
-CREATE TABLE article_categories
-(
-    article_id  UUID REFERENCES articles(id),
-    category_id UUID REFERENCES categories(id),
-    PRIMARY KEY (article_id, category_id)
-);
-
--- Article Statistics Table
-CREATE TABLE article_statistics
-(
-    article_id     UUID REFERENCES articles(id),
-    views_count    INTEGER DEFAULT 0,
-    likes_count    INTEGER DEFAULT 0,
-    comments_count INTEGER DEFAULT 0,
-    last_updated   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (article_id)
-);
-
+-- Remove the uuid-ossp extension
+DROP EXTENSION IF EXISTS "uuid-ossp";
