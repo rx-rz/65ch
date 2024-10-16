@@ -2,19 +2,21 @@ package rest
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
 	"github.com/rx-rz/65ch/internal/utils"
 	"net/http"
 	"os"
+	"time"
 )
 
 func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/users", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.updateUserDetailsHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.updateUserEmailHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.updateUserPasswordHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
 }
 
 type CreateUserRequest struct {
@@ -98,9 +100,16 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		api.internalServerErrorResponse(w, r, err)
 		return
 	}
-	r.Header.Add("Authorization", "Bearer "+token)
+	cookie := http.Cookie{
+		Name:     "access_token",
+		Value:    fmt.Sprintf("Bearer %s", token),
+		Expires:  time.Now().Add(15 * time.Minute),
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
+	}
+	http.SetCookie(w, &cookie)
 	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": map[string]string{"token": token}}, nil)
-
 }
 
 type UpdateUserDetailsRequest struct {
