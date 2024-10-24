@@ -9,6 +9,7 @@ import (
 type UserModel struct {
 	DB *sql.DB
 }
+
 type User struct {
 	ID            string    `db:"id"`
 	Email         string    `db:"email"`
@@ -16,6 +17,7 @@ type User struct {
 	FirstName     string    `db:"first_name"`
 	Bio           string    `db:"bio"`
 	ProfilePicUrl string    `db:"profile_picture_url"`
+	ResetToken    *string   `db:"reset_token"`
 	LastName      string    `db:"last_name"`
 	Activated     bool      `db:"activated"`
 	CreatedAt     time.Time `db:"created_at"`

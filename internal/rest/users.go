@@ -12,8 +12,9 @@ import (
 )
 
 func (api *API) initializeUserRoutes() {
-	api.router.HandlerFunc(http.MethodPost, "/v1/users", api.registerUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -63,6 +64,18 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 type LoginUserRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
+}
+
+func (api *API) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
