@@ -12,7 +12,8 @@ var (
 )
 
 type Models struct {
-	Users UserModel
+	Users       UserModel
+	ResetTokens ResetTokenModel
 }
 
 func determineDBError(err error) error {
@@ -33,6 +34,7 @@ func determineDBError(err error) error {
 
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Users: UserModel{DB: db},
+		Users:       UserModel{DB: db},
+		ResetTokens: ResetTokenModel{DB: db},
 	}
 }

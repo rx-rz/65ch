@@ -15,16 +15,17 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
+	api.router.HandlerFunc(http.MethodGet, "/v1/auth/reset-password/:email", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
 }
 
 type CreateUserRequest struct {
-	Email             string `json:"email" validate:"required,email"`
-	Password          string `json:"password" validate:"required,min=8"`
-	FirstName         string `json:"first_name" validate:"required,min=1"`
-	LastName          string `json:"last_name" validate:"required,min=1"`
+	Email             string `json:"email" validate:"required,email,max=255"`
+	Password          string `json:"password" validate:"required,min=8,max=72"`
+	FirstName         string `json:"first_name" validate:"required,min=1,max=255"`
+	LastName          string `json:"last_name" validate:"required,min=1,max=255"`
 	Bio               string `json:"bio"`
 	ProfilePictureUrl string `json:"profile_picture_url"`
 }
@@ -62,8 +63,8 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type LoginUserRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=8,max=255"`
 }
 
 func (api *API) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -256,3 +257,5 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "User email updated successfully"}, nil)
 
 }
+
+func (api *API) resetPassword() {}
