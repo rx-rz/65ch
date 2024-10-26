@@ -127,8 +127,8 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateUserDetailsRequest struct {
-	FirstName         *string `json:"first_name"`
-	LastName          *string `json:"last_name"`
+	FirstName         *string `json:"first_name", validate:"min=1,max=255"`
+	LastName          *string `json:"last_name", validate:"min=1,max=255"`
 	Bio               *string `json:"bio"`
 	ProfilePictureUrl *string `json:"profile_picture_url"`
 	Activated         *bool   `json:"activated"`
