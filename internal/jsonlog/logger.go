@@ -66,7 +66,6 @@ func (l *Logger) PrintFatal(err error, properties map[string]string) {
 	if logError != nil {
 		log.Println("jsonlog failed to initialize correctly")
 	}
-	os.Exit(1)
 }
 
 func (l *Logger) print(level Level, message string, properties map[string]string) error {

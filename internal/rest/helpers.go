@@ -74,3 +74,22 @@ func (api *API) handleDBError(w http.ResponseWriter, r *http.Request, err error,
 	}
 
 }
+
+func (api *API) returnDBError(w http.ResponseWriter, r *http.Request, err error, message string) {
+	switch {
+	case errors.Is(err, data.ErrRecordNotFound):
+		api.notFoundErrorResponse(w, r)
+	case errors.Is(err, data.ErrEditConflict):
+		api.conflictResponse(w, r, message)
+	case errors.Is(err, data.ErrCheckConstraint):
+		api.badRequestErrorResponse(w, r, message)
+	case errors.Is(err, data.ErrDuplicateKey):
+		api.badRequestErrorResponse(w, r, message)
+	case errors.Is(err, data.ErrForeignKeyViolation):
+		api.badRequestErrorResponse(w, r, message)
+	case errors.Is(err, data.ErrInvalidInput):
+		api.badRequestErrorResponse(w, r, message)
+	default:
+		api.internalServerErrorResponse(w, r, err)
+	}
+}

@@ -15,8 +15,8 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/request", api.resetPasswordHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/reset", api.resetPasswordHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/request", api.resetPasswordTokenHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/reset", api.resetPasswordFormHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -263,7 +263,7 @@ type ResetPasswordRequest struct {
 	Email string `json:"email" validate:"required,email,max=255"`
 }
 
-func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -282,9 +282,10 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 			api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "Token sent to user email if user exists"}, nil)
 		}
 		api.internalServerErrorResponse(w, r, err)
+		return
 	}
 	resetToken, expiration := utils.GenerateResetToken()
-	previousResetToken, err := api.models.ResetTokens.Get(user.ID)
+	previousResetToken, err := api.models.ResetTokens.GetByUserID(user.ID)
 
 	if previousResetToken == nil {
 		err = api.models.ResetTokens.Create(&data.ResetToken{
@@ -308,4 +309,44 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": resetToken, "message": "Token sent to user email if user exists"}, nil)
+}
+
+type ResetPasswordFormRequest struct {
+	ResetToken  string `json:"reset_token" validate:"required,reset_token"`
+	NewPassword string `json:"new_password" validate:"required"`
+}
+
+func (api *API) resetPasswordFormHandler(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordFormRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestErrorResponse(w, r, err.Error())
+		return
+	}
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		return
+	}
+	existingResetToken, err := api.models.ResetTokens.GetByToken(req.ResetToken)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+		return
+	}
+	user, err := api.models.Users.FindByEmail(existingResetToken.UserID)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+		return
+	}
+	err = api.models.Users.UpdatePassword(user.Email, req.NewPassword)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+		return
+	}
+	err = api.models.ResetTokens.Delete(user.ID)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+		return
+	}
+	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "User password reset successfully"}, nil)
 }

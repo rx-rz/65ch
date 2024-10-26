@@ -40,7 +40,7 @@ func (m UserModel) Create(user *User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&user.FirstName, &user.LastName, &user.Email, &user.Bio, &user.ProfilePicUrl, &user.CreatedAt)
-	return determineDBError(err)
+	return DetermineDBError(err, "user_create")
 }
 
 func (m UserModel) FindByEmail(email string) (*User, error) {
@@ -52,7 +52,7 @@ func (m UserModel) FindByEmail(email string) (*User, error) {
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, email).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
 	if err != nil {
-		return nil, determineDBError(err)
+		return nil, DetermineDBError(err, "user_findbyemail")
 	}
 	return &user, nil
 }
@@ -66,7 +66,7 @@ func (m UserModel) FindByID(id string) (*User, error) {
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, id).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
 	if err != nil {
-		return nil, determineDBError(err)
+		return nil, DetermineDBError(err, "user_findbyid")
 	}
 	return &user, nil
 }
@@ -83,7 +83,7 @@ func (m UserModel) UpdateDetails(user *User) (*User, error) {
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&userDetails.ID, &userDetails.FirstName, &userDetails.LastName, &userDetails.Bio, &userDetails.ProfilePicUrl, &userDetails.Activated)
 	if err != nil {
-		return nil, determineDBError(err)
+		return nil, DetermineDBError(err, "user_updatedetails")
 	}
 	return &userDetails, nil
 }
@@ -96,7 +96,7 @@ func (m UserModel) UpdateEmail(email, newEmail string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, args...)
-	return determineDBError(err)
+	return DetermineDBError(err, "user_updateemail")
 }
 
 func (m UserModel) UpdatePassword(email, newPassword string) error {
@@ -107,5 +107,5 @@ func (m UserModel) UpdatePassword(email, newPassword string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, args...)
-	return determineDBError(err)
+	return DetermineDBError(err, "user_updatepassword")
 }

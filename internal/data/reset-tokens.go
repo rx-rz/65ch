@@ -25,18 +25,30 @@ func (m ResetTokenModel) Create(resetToken *ResetToken) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, args...)
-	return determineDBError(err)
+	return DetermineDBError(err, "resettoken_create")
 
 }
 
-func (m ResetTokenModel) Get(userId string) (*ResetToken, error) {
+func (m ResetTokenModel) GetByUserID(userId string) (*ResetToken, error) {
 	var resetToken ResetToken
 	q := `SELECT id, user_id, reset_token, expiration FROM reset_tokens WHERE user_id = $1`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, userId).Scan(&resetToken.ID, &resetToken.UserID, &resetToken.ResetToken, &resetToken.Expiration)
 	if err != nil {
-		return nil, determineDBError(err)
+		return nil, DetermineDBError(err, "resettoken_getbyuserid")
+	}
+	return &resetToken, nil
+}
+
+func (m ResetTokenModel) GetByToken(token string) (*ResetToken, error) {
+	var resetToken ResetToken
+	q := `SELECT id, user_id, reset_token, expiration FROM reset_tokens WHERE reset_token = $1`
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+	err := m.DB.QueryRowContext(ctx, q, token).Scan(&resetToken.ID, &resetToken.UserID, &resetToken.ResetToken, &resetToken.Expiration)
+	if err != nil {
+		return nil, DetermineDBError(err, "resettoken_getbytoken")
 	}
 	return &resetToken, nil
 }
@@ -48,7 +60,7 @@ func (m ResetTokenModel) Update(resetToken *ResetToken) error {
 	args := []any{resetToken.ResetToken, resetToken.Expiration, resetToken.UserID}
 	_, err := m.DB.ExecContext(ctx, q, args...)
 	if err != nil {
-		return determineDBError(err)
+		return DetermineDBError(err, "resettoken_update")
 	}
 	return nil
 }
@@ -60,5 +72,5 @@ func (m ResetTokenModel) Delete(userId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, userId)
-	return determineDBError(err)
+	return DetermineDBError(err, "resettoken_delete")
 }
