@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/lucsky/cuid"
 	"time"
 )
 
@@ -36,4 +37,11 @@ func DecodeToken[T jwt.Claims](tokenString string, secret string, claims T) (T, 
 		return claims, nil
 	}
 	return claims, fmt.Errorf("invalid token provided")
+}
+
+func GenerateResetToken() (string, time.Time) {
+	token := cuid.New()
+	expiry := time.Now().Add(time.Minute * 15)
+	return token, expiry
+
 }
