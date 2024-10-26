@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucsky/cuid"
+	"strings"
 	"time"
 )
 
@@ -40,8 +41,8 @@ func DecodeToken[T jwt.Claims](tokenString string, secret string, claims T) (T, 
 }
 
 func GenerateResetToken() (string, time.Time) {
-	token := cuid.New()
+	parts := []string{cuid.New(), cuid.New()}
+	token := strings.Join(parts, "")[:32]
 	expiry := time.Now().Add(time.Minute * 15)
 	return token, expiry
-
 }

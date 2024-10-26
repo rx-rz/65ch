@@ -15,7 +15,8 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
-	api.router.HandlerFunc(http.MethodGet, "/v1/auth/reset-password/:email", api.registerUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/request", api.resetPasswordHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/reset", api.resetPasswordHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -258,4 +259,53 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 
 }
 
-func (api *API) resetPassword() {}
+type ResetPasswordRequest struct {
+	Email string `json:"email" validate:"required,email,max=255"`
+}
+
+func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestErrorResponse(w, r, err.Error())
+		return
+	}
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		return
+	}
+	user, err := api.models.Users.FindByEmail(req.Email)
+
+	if err != nil {
+		if errors.Is(err, data.ErrRecordNotFound) && user == nil {
+			api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "Token sent to user email if user exists"}, nil)
+		}
+		api.internalServerErrorResponse(w, r, err)
+	}
+	resetToken, expiration := utils.GenerateResetToken()
+	previousResetToken, err := api.models.ResetTokens.Get(user.ID)
+
+	if previousResetToken == nil {
+		err = api.models.ResetTokens.Create(&data.ResetToken{
+			ResetToken: resetToken,
+			Expiration: expiration,
+			UserID:     user.ID,
+		})
+		if err != nil {
+			api.badRequestErrorResponse(w, r, err.Error())
+			return
+		}
+	} else {
+		err = api.models.ResetTokens.Update(&data.ResetToken{
+			ResetToken: resetToken,
+			Expiration: expiration,
+			UserID:     user.ID,
+		})
+		if err != nil {
+			api.badRequestErrorResponse(w, r, err.Error())
+			return
+		}
+	}
+	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": resetToken, "message": "Token sent to user email if user exists"}, nil)
+}

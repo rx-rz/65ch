@@ -48,10 +48,13 @@ func (m UserModel) FindByEmail(email string) (*User, error) {
 	q := `
 	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url FROM users WHERE email = $1
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, email).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
-	return &user, determineDBError(err)
+	if err != nil {
+		return nil, determineDBError(err)
+	}
+	return &user, nil
 }
 
 func (m UserModel) FindByID(id string) (*User, error) {
@@ -62,7 +65,10 @@ func (m UserModel) FindByID(id string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, id).Scan(&user.FirstName, &user.LastName, &user.Email, &user.ID, &user.Password, &user.Bio, &user.ProfilePicUrl)
-	return &user, determineDBError(err)
+	if err != nil {
+		return nil, determineDBError(err)
+	}
+	return &user, nil
 }
 
 func (m UserModel) UpdateDetails(user *User) (*User, error) {
@@ -77,7 +83,7 @@ func (m UserModel) UpdateDetails(user *User) (*User, error) {
 	defer cancel()
 	err := m.DB.QueryRowContext(ctx, q, args...).Scan(&userDetails.ID, &userDetails.FirstName, &userDetails.LastName, &userDetails.Bio, &userDetails.ProfilePicUrl, &userDetails.Activated)
 	if err != nil {
-		return &User{}, determineDBError(err)
+		return nil, determineDBError(err)
 	}
 	return &userDetails, nil
 }
