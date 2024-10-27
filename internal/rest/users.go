@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
@@ -36,12 +35,12 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	v := validator.New()
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
-	validationError := v.Struct(req)
-	if validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+
+	if validationError := v.Struct(req); validationError != nil {
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 	hashedPassword, _ := utils.HashPassword(req.Password)
@@ -57,15 +56,10 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = api.models.Users.Create(user)
 	if err != nil {
-		api.handleDBError(w, r, err, "User with provided email already exists")
+		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeJSON(w, http.StatusCreated, envelope{"status": "success", "data": nil, "message": "User registered successfully"}, nil)
-}
-
-type LoginUserRequest struct {
-	Email    string `json:"email" validate:"required,email,max=255"`
-	Password string `json:"password" validate:"required,min=8,max=255"`
+	api.writeSuccessResponse(w, http.StatusCreated, nil, "User registered successfully")
 }
 
 func (api *API) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,27 +74,33 @@ func (api *API) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+type LoginUserRequest struct {
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=8,max=255"`
+}
+
 func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginUserRequest
 
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
+
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
 	if err != nil {
-		api.handleDBError(w, r, err, "")
+		api.handleDBError(w, r, err)
 		return
 	}
 	matches := utils.CheckPasswordHash(req.Password, user.Password)
 	if !matches {
-		api.badRequestErrorResponse(w, r, "Invalid details provided")
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", err)
 		return
 	}
 	token, err := utils.GenerateToken(map[string]string{
@@ -112,7 +112,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		"bio":                 user.Bio,
 	}, os.Getenv("JWT_SECRET"))
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.writeErrorResponse(w, http.StatusInternalServerError, ErrInternal, "Token generation failed", err)
 		return
 	}
 	cookie := http.Cookie{
@@ -124,12 +124,12 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	}
 	http.SetCookie(w, &cookie)
-	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": map[string]string{"token": token}}, nil)
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"token": token}, "Login successful")
 }
 
 type UpdateUserDetailsRequest struct {
-	FirstName         *string `json:"first_name", validate:"min=1,max=255"`
-	LastName          *string `json:"last_name", validate:"min=1,max=255"`
+	FirstName         *string `json:"first_name" validate:"min=1,max=255"`
+	LastName          *string `json:"last_name" validate:"min=1,max=255"`
 	Bio               *string `json:"bio"`
 	ProfilePictureUrl *string `json:"profile_picture_url"`
 	Activated         *bool   `json:"activated"`
@@ -141,16 +141,17 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	v := validator.New()
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
+
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
 		return
 	}
 	user, err := api.models.Users.FindByID(req.ID)
 	if err != nil {
-		api.handleDBError(w, r, err, "")
+		api.handleDBError(w, r, err)
 		return
 	}
 	if req.FirstName != nil {
@@ -170,16 +171,10 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	}
 	_, err = api.models.Users.UpdateDetails(user)
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeJSON(w, http.StatusOK, envelope{"data": map[string]any{
-		"user": map[string]string{
-			"email": user.Email,
-			"id":    user.ID,
-		},
-	}, "status": "success"}, nil)
-
+	api.writeSuccessResponse(w, http.StatusOK, nil, "User updated successfully")
 }
 
 type UpdateUserEmailRequest struct {
@@ -192,32 +187,30 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 	var req UpdateUserEmailRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
 	if err != nil {
-		if errors.Is(err, data.ErrRecordNotFound) {
-			api.notFoundErrorResponse(w, r)
-			return
-		}
+		api.handleDBError(w, r, err)
+		return
 	}
 	matches := utils.CheckPasswordHash(req.Password, user.Password)
 	if !matches {
-		api.badRequestErrorResponse(w, r, "Invalid details provided")
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", nil)
 		return
 	}
 	err = api.models.Users.UpdateEmail(req.Email, req.NewEmail)
 	if err != nil {
-		api.handleDBError(w, r, err, "")
+		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "User email updated successfully"}, nil)
+	api.writeSuccessResponse(w, http.StatusOK, nil, "User email updated successfully")
 }
 
 type UpdateUserPasswordRequest struct {
@@ -230,32 +223,34 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 	var req UpdateUserPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
+
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 
 	user, err := api.models.Users.FindByEmail(req.Email)
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
 	matches := utils.CheckPasswordHash(req.Password, user.Email)
 	if !matches {
-		api.badRequestErrorResponse(w, r, "invalid details provided")
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", nil)
+		return
 	}
-	if err != nil {
-		if errors.Is(err, data.ErrRecordNotFound) {
-			api.notFoundErrorResponse(w, r)
-			return
-		}
-	}
+
 	hashedPassword, _ := utils.HashPassword(req.NewPassword)
 	err = api.models.Users.UpdatePassword(req.Email, hashedPassword)
 	if err != nil {
-		api.handleDBError(w, r, err, "")
+		api.handleDBError(w, r, err)
+		return
 	}
-	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "User email updated successfully"}, nil)
+	api.writeSuccessResponse(w, http.StatusOK, nil, "User password updated successfully")
 
 }
 
@@ -267,21 +262,18 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 	var req ResetPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
+
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
-
 	if err != nil {
-		if errors.Is(err, data.ErrRecordNotFound) && user == nil {
-			api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "Token sent to user email if user exists"}, nil)
-		}
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
 	resetToken, expiration := utils.GenerateResetToken()
@@ -294,7 +286,7 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 			UserID:     user.ID,
 		})
 		if err != nil {
-			api.badRequestErrorResponse(w, r, err.Error())
+			api.handleDBError(w, r, err)
 			return
 		}
 	} else {
@@ -304,11 +296,11 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 			UserID:     user.ID,
 		})
 		if err != nil {
-			api.badRequestErrorResponse(w, r, err.Error())
+			api.handleDBError(w, r, err)
 			return
 		}
 	}
-	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": resetToken, "message": "Token sent to user email if user exists"}, nil)
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"reset_token": resetToken}, "User email updated successfully")
 }
 
 type ResetPasswordFormRequest struct {
@@ -320,33 +312,34 @@ func (api *API) resetPasswordFormHandler(w http.ResponseWriter, r *http.Request)
 	var req ResetPasswordFormRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.badRequestErrorResponse(w, r, err.Error())
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
+
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 	existingResetToken, err := api.models.ResetTokens.GetByToken(req.ResetToken)
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(existingResetToken.UserID)
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
 	err = api.models.Users.UpdatePassword(user.Email, req.NewPassword)
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
 	err = api.models.ResetTokens.Delete(user.ID)
 	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeJSON(w, http.StatusOK, envelope{"status": "success", "data": nil, "message": "User password reset successfully"}, nil)
+	api.writeSuccessResponse(w, http.StatusOK, nil, "User password reset successfully")
 }

@@ -94,22 +94,6 @@ func categorizePostgresError(pqErr *pq.Error, operation string) error {
 	}
 }
 
-func determineDBError(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrRecordNotFound
-	}
-	var dbError *pq.Error
-	errors.As(err, &dbError)
-	switch dbError.Code {
-	case "23505":
-		return ErrEditConflict
-	}
-	return nil
-}
-
 func NewModels(db *sql.DB) Models {
 	return Models{
 		Users:       UserModel{DB: db},
