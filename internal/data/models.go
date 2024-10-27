@@ -42,7 +42,7 @@ func DetermineDBError(err error, operation string) error {
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return &DBError{
-			Err:       err,
+			Err:       ErrRecordNotFound,
 			Operation: operation,
 			Detail:    "requested record does not exist",
 		}

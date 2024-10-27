@@ -80,6 +80,8 @@ func (api *API) handleDBError(w http.ResponseWriter, r *http.Request, err error)
 	if errors.As(err, &dbErr) {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
+			//rewrite as this when deploying to prod:
+			// api.writeErrorResponse(w, http.StatusNotFound, ErrNotFound, data.ErrRecordNotFound.Error(), dbErr)
 			api.writeErrorResponse(w, http.StatusNotFound, ErrNotFound, err.Error(), dbErr)
 		case errors.Is(err, data.ErrEditConflict):
 			api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, err.Error(), dbErr)
