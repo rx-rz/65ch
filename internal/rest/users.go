@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
@@ -11,11 +12,11 @@ import (
 )
 
 func (api *API) initializeUserRoutes() {
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/logout", api.logoutUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/register", api.registerUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/request-password-reset", api.resetPasswordRequestHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/reset-password", api.resetPasswordHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/auth/request-password-reset", api.resetPasswordRequestHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/auth/reset-password", api.resetPasswordHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -54,8 +55,8 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, "User with provided email already exists", nil)
 		return
 	}
-	if err != nil {
-		api.internalServerErrorResponse(w, r, err)
+	if err != nil && !errors.Is(err, data.ErrRecordNotFound) {
+		api.handleDBError(w, r, err)
 		return
 	}
 	user = &data.User{
