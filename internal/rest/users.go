@@ -11,14 +11,14 @@ import (
 )
 
 func (api *API) initializeUserRoutes() {
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/login", api.loginUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/logout", api.logoutUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/request", api.resetPasswordTokenHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/auth/reset-password/reset", api.resetPasswordFormHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update", api.authorizedAccessOnly(api.updateUserDetailsHandler))
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-email", api.authorizedAccessOnly(api.updateUserEmailHandler))
-	api.router.HandlerFunc(http.MethodPatch, "/v1/users/update-password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/logout", api.logoutUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/register", api.registerUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/request-password-reset", api.resetPasswordTokenHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/reset-password", api.resetPasswordFormHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
 }
 
 type CreateUserRequest struct {
@@ -44,8 +44,12 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hashedPassword, _ := utils.HashPassword(req.Password)
-
-	user := &data.User{
+	user, _ := api.models.Users.FindByEmail(req.Email)
+	if user != nil {
+		api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, "User with provided email already exists", nil)
+		return
+	}
+	user = &data.User{
 		Email:         req.Email,
 		Password:      hashedPassword,
 		FirstName:     req.FirstName,
@@ -268,7 +272,7 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, r, utils.GetValidationErrors(validationError))
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)

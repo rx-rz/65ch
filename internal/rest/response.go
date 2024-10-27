@@ -25,6 +25,7 @@ type Pagination struct {
 // ErrorInfo provides detailed error information
 type ErrorInfo struct {
 	Code      string            `json:"code"`    // application-specific error code
+	Status    string            `json:"status"`  // "success" or "error"
 	Message   any               `json:"message"` // user-friendly error message
 	Timestamp string            `json:"timestamp"`
 	Details   map[string]string `json:"details,omitempty"` // additional error context
@@ -62,10 +63,6 @@ func (api *API) errorResponse(w http.ResponseWriter, r *http.Request, status int
 	return
 }
 
-func (api *API) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors []string) {
-	api.errorResponse(w, r, http.StatusUnprocessableEntity, envelope{"errors": errors}, false)
-}
-
 func (api *API) invalidTokenResponse(w http.ResponseWriter, r *http.Request) {
 	api.errorResponse(w, r, http.StatusUnprocessableEntity, "Invalid token provided", false)
 }
@@ -100,29 +97,6 @@ func (api *API) handleDBError(w http.ResponseWriter, r *http.Request, err error)
 	}
 }
 
-func (api *API) writeError(w http.ResponseWriter, r *http.Request, status int, message any, err error) {
-	var dbErr *data.DBError
-	if errors.As(err, &dbErr) {
-		api.logger.PrintError(err, map[string]string{
-			"request_method": r.Method,
-			"request_url":    r.URL.String(),
-			"error":          dbErr.Error(),
-		})
-	} else {
-		api.logger.PrintError(err, map[string]string{
-			"request_method": r.Method,
-			"request_url":    r.URL.String(),
-			"error":          err.Error(),
-		})
-	}
-	if status != http.StatusInternalServerError {
-		api.writeJSON(w, status, envelope{"message": message, "status": "error"}, nil)
-		return
-	}
-	api.writeJSON(w, status, envelope{"message": message, "status": "fail"}, nil)
-	return
-}
-
 func (api *API) writeSuccessResponse(w http.ResponseWriter, status int, data any, message string) {
 	response := SuccessInfo{
 		Status:    "success",
@@ -146,6 +120,7 @@ func (api *API) writeErrorResponse(w http.ResponseWriter, status int, errorCode 
 		Code:      string(errorCode),
 		Message:   message,
 		Details:   details,
+		Status:    "error",
 	}
 	api.writeJSON(w, status, response, nil)
 }
