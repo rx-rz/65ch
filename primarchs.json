@@ -1,0 +1,172 @@
+{
+  "primarchs": [
+    {
+      "first_name": "Lion",
+      "last_name": "El'Jonson",
+      "email": "lion@darkangels.terra",
+      "password": "calibanite_secrets123",
+      "bio": "Supreme strategist and leader of the Dark Angels. Known for unwavering loyalty and secretive nature. Master of the First Legion.",
+      "profile_picture_url": "/images/primarchs/lion.jpg"
+    },
+    {
+      "first_name": "Fulgrim",
+      "last_name": "The Phoenician",
+      "email": "perfectionist@emperorschildren.terra",
+      "password": "pursuit_of_perfection",
+      "bio": "Perfectionist leader of the Emperor's Children. Master artisan and warrior seeking ultimate perfection in all endeavors.",
+      "profile_picture_url": "/images/primarchs/fulgrim.jpg"
+    },
+    {
+      "first_name": "Perturabo",
+      "last_name": "The Lord of Iron",
+      "email": "siegemaster@ironwarriors.terra",
+      "password": "decimal_logic456",
+      "bio": "Master siege engineer and commander of the Iron Warriors. Brilliant architect with a deep sense of bitterness.",
+      "profile_picture_url": "/images/primarchs/perturabo.jpg"
+    },
+    {
+      "first_name": "Jaghatai",
+      "last_name": "Khan",
+      "email": "windswift@whitescars.terra",
+      "password": "chogoris_plains789",
+      "bio": "Swift and deadly leader of the White Scars. Master of lightning warfare and Chogorian philosophy.",
+      "profile_picture_url": "/images/primarchs/jaghatai.jpg"
+    },
+    {
+      "first_name": "Leman",
+      "last_name": "Russ",
+      "email": "wolfking@spacewolves.terra",
+      "password": "fenrisian_ale888",
+      "bio": "The Wolf King of Fenris. Fierce warrior and loyal executioner of the Emperor's will.",
+      "profile_picture_url": "/images/primarchs/leman.jpg"
+    },
+    {
+      "first_name": "Rogal",
+      "last_name": "Dorn",
+      "email": "praetorian@fists.terra",
+      "password": "fortification_master",
+      "bio": "The Praetorian of Terra. Stoic defender and master fortifier of the Imperial Palace.",
+      "profile_picture_url": "/images/primarchs/rogal.jpg"
+    },
+    {
+      "first_name": "Konrad",
+      "last_name": "Curze",
+      "email": "nighthaunter@nightlords.terra",
+      "password": "justice_through_fear",
+      "bio": "The Night Haunter. Terror of Nostramo and prophet of doom.",
+      "profile_picture_url": "/images/primarchs/konrad.jpg"
+    },
+    {
+      "first_name": "Sanguinius",
+      "last_name": "The Angel",
+      "email": "angelus@bloodangels.terra",
+      "password": "wings_of_baal",
+      "bio": "The Great Angel. Noble leader of the Blood Angels, blessed with foresight and supernatural beauty.",
+      "profile_picture_url": "/images/primarchs/sanguinius.jpg"
+    },
+    {
+      "first_name": "Ferrus",
+      "last_name": "Manus",
+      "email": "gorgon@ironhands.terra",
+      "password": "silver_hands_iron",
+      "bio": "The Gorgon. Master craftsman and leader of the Iron Hands Legion.",
+      "profile_picture_url": "/images/primarchs/ferrus.jpg"
+    },
+    {
+      "first_name": "Angron",
+      "last_name": "The Red Angel",
+      "email": "gladiator@worldeaters.terra",
+      "password": "nails_of_rage",
+      "bio": "The Lord of the Red Sands. Tragic figure turned into an engine of pure rage.",
+      "profile_picture_url": "/images/primarchs/angron.jpg"
+    },
+    {
+      "first_name": "Roboute",
+      "last_name": "Guilliman",
+      "email": "avenging@ultramarines.terra",
+      "password": "codex_astartes",
+      "bio": "The Avenging Son. Master administrator and tactical genius of the Ultramarines.",
+      "profile_picture_url": "/images/primarchs/roboute.jpg"
+    },
+    {
+      "first_name": "Mortarion",
+      "last_name": "The Death Lord",
+      "email": "reaper@deathguard.terra",
+      "password": "toxic_resilience",
+      "bio": "The Death Lord. Master of chemical warfare and endurance.",
+      "profile_picture_url": "/images/primarchs/mortarion.jpg"
+    },
+    {
+      "first_name": "Magnus",
+      "last_name": "The Red",
+      "email": "crimson@thousandsons.terra",
+      "password": "psychic_mastery",
+      "bio": "The Crimson King. Most powerful psyker among the primarchs and scholar of the forbidden.",
+      "profile_picture_url": "/images/primarchs/magnus.jpg"
+    },
+    {
+      "first_name": "Horus",
+      "last_name": "Lupercal",
+      "email": "warmaster@sonsofhorus.terra",
+      "password": "first_among_equals",
+      "bio": "The First Warmaster. Once most favored son, architect of the greatest betrayal.",
+      "profile_picture_url": "/images/primarchs/horus.jpg"
+    },
+    {
+      "first_name": "Lorgar",
+      "last_name": "Aurelian",
+      "email": "urizen@wordbearer.terra",
+      "password": "book_of_lorgar",
+      "bio": "The Bearer of the Word. Religious zealot and master of faith and oratory.",
+      "profile_picture_url": "/images/primarchs/lorgar.jpg"
+    },
+    {
+      "first_name": "Vulkan",
+      "last_name": "The Drake Lord",
+      "email": "immortal@salamanders.terra",
+      "password": "fires_of_nocturne",
+      "bio": "The Lord of Drakes. Master artificer and perpetual, known for his humanity.",
+      "profile_picture_url": "/images/primarchs/vulkan.jpg"
+    },
+    {
+      "first_name": "Corvus",
+      "last_name": "Corax",
+      "email": "ravenlord@ravenguard.terra",
+      "password": "shadow_master",
+      "bio": "The Raven Lord. Master of stealth and guerrilla warfare.",
+      "profile_picture_url": "/images/primarchs/corvus.jpg"
+    },
+    {
+      "first_name": "Alpharius",
+      "last_name": "Omegon",
+      "email": "hydra@alphalegion.terra",
+      "password": "i_am_alpharius",
+      "bio": "The Last Primarch(s). Twin masters of subterfuge and deception.",
+      "profile_picture_url": "/images/primarchs/alpharius.jpg"
+    },
+    {
+      "first_name": "Omegon",
+      "last_name": "Alpharius",
+      "email": "omega@alphalegion.terra",
+      "password": "i_am_omegon",
+      "bio": "The Hidden Primarch. Secret twin of Alpharius, master of covert operations.",
+      "profile_picture_url": "/images/primarchs/omegon.jpg"
+    },
+    {
+      "first_name": "[REDACTED]",
+      "last_name": "[REDACTED]",
+      "email": "unknown@deleted.terra",
+      "password": "forgotten_legion",
+      "bio": "Records expunged from Imperial history. The lost primarch of the II Legion.",
+      "profile_picture_url": "/images/primarchs/unknown.jpg"
+    },
+    {
+      "first_name": "[REDACTED]",
+      "last_name": "[REDACTED]",
+      "email": "unknown@deleted.terra",
+      "password": "forgotten_legion",
+      "bio": "Records expunged from Imperial history. The lost primarch of the XI Legion.",
+      "profile_picture_url": "/images/primarchs/unknown.jpg"
+    }
+  ]
+}

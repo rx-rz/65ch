@@ -143,8 +143,8 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateUserDetailsRequest struct {
-	FirstName         *string `json:"first_name" validate:"min=1,max=255"`
-	LastName          *string `json:"last_name" validate:"min=1,max=255"`
+	FirstName         *string `json:"first_name"`
+	LastName          *string `json:"last_name"`
 	Bio               *string `json:"bio"`
 	ProfilePictureUrl *string `json:"profile_picture_url"`
 	Activated         *bool   `json:"activated"`
@@ -161,7 +161,7 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
 	user, err := api.models.Users.FindByID(req.ID)
@@ -229,9 +229,9 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateUserPasswordRequest struct {
-	Email       string `json:"email" validate:"required,email"`
-	Password    string `json:"password" validate:"password"`
-	NewPassword string `json:"new_password" validate:"new_password"`
+	Email           string `json:"email" validate:"required,email"`
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required"`
 }
 
 func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +253,7 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 		api.handleDBError(w, r, err)
 		return
 	}
-	matches := utils.CheckPasswordHash(req.Password, user.Email)
+	matches := utils.CheckPasswordHash(req.CurrentPassword, user.Password)
 	if !matches {
 		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", nil)
 		return
