@@ -35,6 +35,7 @@ type ErrorCode string
 
 const (
 	ErrInvalidInput      ErrorCode = "INVALID_INPUT"
+	ErrExpired           ErrorCode = "EXPIRED"
 	ErrNotFound          ErrorCode = "NOT_FOUND"
 	ErrBadRequest        ErrorCode = "BAD_REQUEST"
 	ErrUnauthorized      ErrorCode = "UNAUTHORIZED"

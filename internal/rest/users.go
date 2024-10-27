@@ -14,8 +14,8 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/login", api.loginUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/logout", api.logoutUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/register", api.registerUserHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/request-password-reset", api.resetPasswordTokenHandler)
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/reset-password", api.resetPasswordFormHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/request-password-reset", api.resetPasswordRequestHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/users/reset-password", api.resetPasswordHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -32,21 +32,30 @@ type CreateUserRequest struct {
 
 func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateUserRequest
-	v := validator.New()
+
 	err := api.readJSON(w, r, &req)
 	if err != nil {
 		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
 		return
 	}
 
+	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
 		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
 		return
 	}
-	hashedPassword, _ := utils.HashPassword(req.Password)
-	user, _ := api.models.Users.FindByEmail(req.Email)
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
+		return
+	}
+	user, err := api.models.Users.FindByEmail(req.Email)
 	if user != nil {
 		api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, "User with provided email already exists", nil)
+		return
+	}
+	if err != nil {
+		api.internalServerErrorResponse(w, r, err)
 		return
 	}
 	user = &data.User{
@@ -97,6 +106,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
 		return
 	}
+
 	user, err := api.models.Users.FindByEmail(req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
@@ -116,7 +126,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		"bio":                 user.Bio,
 	}, os.Getenv("JWT_SECRET"))
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusInternalServerError, ErrInternal, "Token generation failed", err)
+		api.internalServerErrorResponse(w, r, err)
 		return
 	}
 	cookie := http.Cookie{
@@ -262,7 +272,7 @@ type ResetPasswordRequest struct {
 	Email string `json:"email" validate:"required,email,max=255"`
 }
 
-func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request) {
+func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -276,10 +286,15 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
+	if user == nil {
+		api.writeSuccessResponse(w, http.StatusOK, nil, "Token has been sent to your email if you have an account")
+		return
+	}
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
+
 	resetToken, expiration := utils.GenerateResetToken()
 	previousResetToken, err := api.models.ResetTokens.GetByUserID(user.ID)
 
@@ -304,15 +319,15 @@ func (api *API) resetPasswordTokenHandler(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	api.writeSuccessResponse(w, http.StatusOK, envelope{"reset_token": resetToken}, "User email updated successfully")
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"reset_token": resetToken}, "Token has been sent to your email if you have an account")
 }
 
 type ResetPasswordFormRequest struct {
-	ResetToken  string `json:"reset_token" validate:"required,reset_token"`
+	ResetToken  string `json:"reset_token" validate:"required"`
 	NewPassword string `json:"new_password" validate:"required"`
 }
 
-func (api *API) resetPasswordFormHandler(w http.ResponseWriter, r *http.Request) {
+func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordFormRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -326,21 +341,33 @@ func (api *API) resetPasswordFormHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	existingResetToken, err := api.models.ResetTokens.GetByToken(req.ResetToken)
+
+	if existingResetToken.Expiration.UTC().Before(time.Now().UTC()) {
+		err = api.models.ResetTokens.DeleteByToken(req.ResetToken)
+		if err != nil {
+			api.handleDBError(w, r, err)
+			return
+		}
+		api.writeErrorResponse(w, http.StatusGone, ErrExpired, "Password reset token has expired", nil)
+		return
+	}
+
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(existingResetToken.UserID)
+	user, err := api.models.Users.FindByID(existingResetToken.UserID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	err = api.models.Users.UpdatePassword(user.Email, req.NewPassword)
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	err = api.models.Users.UpdatePassword(user.Email, hashedPassword)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	err = api.models.ResetTokens.Delete(user.ID)
+	err = api.models.ResetTokens.DeleteByUserId(user.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return

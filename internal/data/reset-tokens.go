@@ -65,12 +65,21 @@ func (m ResetTokenModel) Update(resetToken *ResetToken) error {
 	return nil
 }
 
-func (m ResetTokenModel) Delete(userId string) error {
+func (m ResetTokenModel) DeleteByUserId(userId string) error {
 	q := `
 	DELETE FROM reset_tokens WHERE user_id = $1
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, userId)
+	return DetermineDBError(err, "resettoken_delete")
+}
+func (m ResetTokenModel) DeleteByToken(token string) error {
+	q := `
+	DELETE FROM reset_tokens WHERE reset_token = $1
+	`
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+	_, err := m.DB.ExecContext(ctx, q, token)
 	return DetermineDBError(err, "resettoken_delete")
 }
