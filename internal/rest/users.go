@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/julienschmidt/httprouter"
 	"github.com/rx-rz/65ch/internal/data"
 	"github.com/rx-rz/65ch/internal/utils"
 	"net/http"
@@ -17,6 +18,10 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/request-password-reset", api.resetPasswordRequestHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/auth/reset-password", api.resetPasswordHandler)
+	api.router.HandlerFunc(http.MethodGet, "/v1/users/:id", api.authorizedAccessOnly(func(w http.ResponseWriter, r *http.Request) {
+		ps := httprouter.ParamsFromContext(r.Context())
+		api.getUserDetailsHandler(w, r, ps)
+	}))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -140,6 +145,35 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"token": token}, "Login successful")
+}
+
+type GetUserDetailsRequest struct {
+	ID string `json:"id" validate:"required"`
+}
+
+func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	req := GetUserDetailsRequest{
+		ID: ps.ByName("id"),
+	}
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
+		return
+	}
+	user, err := api.models.Users.FindByID(req.ID)
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	userDetails := map[string]string{
+		"first_name":          user.FirstName,
+		"last_name":           user.LastName,
+		"email":               user.Email,
+		"bio":                 user.Bio,
+		"profile_picture_url": user.ProfilePicUrl,
+		"created_at":          user.CreatedAt.UTC().String(),
+	}
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"user": userDetails}, "")
 }
 
 type UpdateUserDetailsRequest struct {
