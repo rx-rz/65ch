@@ -31,6 +31,11 @@ type DBError struct {
 	Detail    string
 }
 
+type ModifiedData struct {
+	ID        string
+	Timestamp time.Time
+}
+
 func (e DBError) Error() string {
 	return fmt.Sprintf("database error during %s: %v - %s", e.Operation, e.Err, e.Detail)
 }
