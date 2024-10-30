@@ -11,7 +11,9 @@ type Article struct {
 	AuthorID    string    `json:"author_id"`
 	Title       string    `json:"title"`
 	Status      string    `json:"status"`
+	Category    string    `json:"category"`
 	Content     string    `json:"content"`
+	Tags        []string  `json:"tags"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"last_updated_at"`
 	PublishedAt time.Time `json:"published_at"`
@@ -45,12 +47,61 @@ func (m ArticleModel) GetByID(id string) (*Article, error) {
 	return article, nil
 }
 
-func (m ArticleModel) GetAllPublishedArticles() ([]Article, error) {
-	q := `SELECT count(*) OVER(), id, author_id, title, content, created_at, updated_at, published_at FROM articles WHERE status = 'published'`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q)
-}
+//func (m ArticleModel) GetAll(filters Filters) ([]Article, Metadata, error) {
+//	q := `
+//		SELECT COUNT(*) OVER() as total_count, a.id, a.author_id, a.title, a.content, a.status, a.created_at, a.updated_at, a.published_at,
+//		c.name AS category
+//		FROM articles a
+//		LEFT JOIN article_categories ac ON ac.article_id = a.id
+//		LEFT JOIN categories c ON ac.category_id = c.id
+//		`
+//
+//	if filters.Search != "" {
+//		q += `
+//		AND (
+//				to_tsvector('simple', a.title) @@ plainto_tsquery('simple', $1)
+//                OR to_tsvector('simple', a.content) @@ plainto_tsquery('simple', $1)
+//		)
+//		`
+//	}
+//
+//	if filters.Status != "" {
+//		q += `
+//		AND a.status = $2
+//		`
+//	}
+//
+//	if filters.Category != "" {
+//		q += `
+//		AND c.name = $3
+//		`
+//	}
+//
+//	if len(filters.Tags) > 0 {
+//		q += `
+//		AND t.name IN ($4)
+//		`
+//	}
+//
+//	q += `
+//        ORDER BY a.created_at DESC
+//        LIMIT $5 OFFSET $6
+//    `
+//	args := []any{filters.Search, filters.Status, filters.Category, filters.limit(), filters.offset()}
+//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//	defer cancel()
+//	rows, err := m.DB.QueryContext(ctx, q, args...)
+//	if err != nil {
+//		return nil, Metadata{}, err
+//	}
+//	defer rows.Close()
+//	articles := make([]Article, 0)
+//	var totalCount int
+//	if err = rows.Scan() {
+//		var article Article
+//
+//	}
+//}
 
 func (m ArticleModel) Update(article *Article) (*Article, error) {
 	var articleDetails *Article

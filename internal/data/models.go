@@ -20,6 +20,9 @@ var (
 type Models struct {
 	Users       UserModel
 	ResetTokens ResetTokenModel
+	Articles    ArticleModel
+	Tags        TagModel
+	Categories  CategoryModel
 }
 
 type DBError struct {
@@ -98,5 +101,8 @@ func NewModels(db *sql.DB) Models {
 	return Models{
 		Users:       UserModel{DB: db},
 		ResetTokens: ResetTokenModel{DB: db},
+		Tags:        TagModel{DB: db},
+		Categories:  CategoryModel{DB: db},
+		Articles:    ArticleModel{DB: db},
 	}
 }
