@@ -61,7 +61,7 @@ func (api *API) errorResponse(w http.ResponseWriter, r *http.Request, status int
 		env = envelope{"status": "error", "message": message}
 	}
 	env = envelope{"status": "fail", "data": message}
-	api.writeJSON(w, status, env, nil)
+	api.writeJSON(w, status, env)
 	return
 }
 
@@ -119,7 +119,7 @@ func (api *API) writeSuccessResponse(w http.ResponseWriter, status int, data any
 		Message:   message,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
-	api.writeJSON(w, status, response, nil)
+	api.writeJSON(w, status, response)
 }
 
 func (api *API) writeErrorResponse(w http.ResponseWriter, status int, errorCode ErrorCode, message any, err error) {
@@ -137,7 +137,7 @@ func (api *API) writeErrorResponse(w http.ResponseWriter, status int, errorCode 
 		Details:   details,
 		Status:    "error",
 	}
-	api.writeJSON(w, status, response, nil)
+	api.writeJSON(w, status, response)
 }
 
 func (api *API) successResponseWithPagination() {}

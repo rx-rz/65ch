@@ -54,7 +54,7 @@ func (m CategoryModel) GetAll() ([]*Category, error) {
 }
 
 func (m CategoryModel) GetByName(name string) (*Category, error) {
-	var category *Category
+	var category Category
 	q := `
 	SELECT id, name FROM categories WHERE name = $1
 	`
@@ -64,11 +64,11 @@ func (m CategoryModel) GetByName(name string) (*Category, error) {
 	if err != nil {
 		return nil, DetermineDBError(err, "category_getbyname")
 	}
-	return category, nil
+	return &category, nil
 }
 
 func (m CategoryModel) GetByID(id string) (*Category, error) {
-	var category *Category
+	var category Category
 	q := `
 	SELECT id, name FROM categories WHERE id = $1
 	`
@@ -78,7 +78,7 @@ func (m CategoryModel) GetByID(id string) (*Category, error) {
 	if err != nil {
 		return nil, DetermineDBError(err, "category_getbyid")
 	}
-	return category, nil
+	return &category, nil
 }
 
 func (m CategoryModel) UpdateName(category Category) (ModifiedData, error) {

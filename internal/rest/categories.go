@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
 	"net/http"
@@ -8,10 +9,10 @@ import (
 )
 
 func (api *API) initializeCategoryRoutes() {
-	api.router.HandlerFunc(http.MethodPost, "/categories", api.createCategoryHandler)
-	api.router.HandlerFunc(http.MethodGet, "/categories", api.getCategoriesHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/categories", api.updateCategoryNameHandler)
-	api.router.HandlerFunc(http.MethodDelete, "/categories/:id", api.deleteCategoryHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/categories", api.createCategoryHandler)
+	api.router.HandlerFunc(http.MethodGet, "/v1/categories", api.getCategoriesHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/categories", api.updateCategoryNameHandler)
+	api.router.HandlerFunc(http.MethodDelete, "/v1/categories/:id", api.deleteCategoryHandler)
 }
 
 type CreateCategoryRequest struct {
@@ -20,7 +21,7 @@ type CreateCategoryRequest struct {
 
 func (api *API) createCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateCategoryRequest
-	err := api.readJSON(w, r, req)
+	err := api.readJSON(w, r, &req)
 	if err != nil {
 		api.badRequestResponse(w, err, err.Error())
 		return
@@ -28,6 +29,11 @@ func (api *API) createCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, validationError)
+		return
+	}
+	existingCategory, _ := api.models.Categories.GetByName(req.Name)
+	if existingCategory != nil {
+		api.conflictResponse(w, fmt.Sprintf("Category with name %s already exists", req.Name))
 		return
 	}
 	category, err := api.models.Categories.Create(req.Name)
@@ -43,6 +49,7 @@ func (api *API) getCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	categories, err := api.models.Categories.GetAll()
 	if err != nil {
 		api.handleDBError(w, r, err)
+		return
 	}
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"categories": categories}, "")
 }
@@ -88,6 +95,7 @@ func (api *API) deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(param)
 	if err != nil {
 		api.badRequestResponse(w, err, "ID param must be an integer")
+		return
 	}
 	deleteInfo, err := api.models.Categories.DeleteByID(id)
 	if err != nil {
