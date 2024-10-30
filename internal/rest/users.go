@@ -41,13 +41,13 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	hashedPassword, err := utils.HashPassword(req.Password)
@@ -57,7 +57,7 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
 	if user != nil {
-		api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, "User with provided email already exists", nil)
+		api.conflictResponse(w, "User with email already exists")
 		return
 	}
 	if err != nil && !errors.Is(err, data.ErrRecordNotFound) {
@@ -103,13 +103,13 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	matches := utils.CheckPasswordHash(req.Password, user.Password)
 	if !matches {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", err)
+		api.badRequestResponse(w, err, "Invalid details provided")
 		return
 	}
 	token, err := utils.GenerateToken(map[string]string{
@@ -157,7 +157,7 @@ func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "", validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	user, err := api.models.Users.FindByID(req.ID)
@@ -190,12 +190,12 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	v := validator.New()
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	user, err := api.models.Users.FindByID(req.ID)
@@ -236,12 +236,12 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 	var req UpdateUserEmailRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
@@ -251,7 +251,7 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	matches := utils.CheckPasswordHash(req.Password, user.Password)
 	if !matches {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", nil)
+		api.badRequestResponse(w, err, "Invalid details provided")
 		return
 	}
 	err = api.models.Users.UpdateEmail(req.Email, req.NewEmail)
@@ -272,13 +272,13 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 	var req UpdateUserPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 
@@ -289,7 +289,7 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 	}
 	matches := utils.CheckPasswordHash(req.CurrentPassword, user.Password)
 	if !matches {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, "Invalid details provided", nil)
+		api.badRequestResponse(w, err, "Invalid details provided")
 		return
 	}
 
@@ -311,13 +311,13 @@ func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Reque
 	var req ResetPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	user, err := api.models.Users.FindByEmail(req.Email)
@@ -366,13 +366,13 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordFormRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, err.Error(), err)
+		api.badRequestResponse(w, err, err.Error())
 		return
 	}
 
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
-		api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(validationError), validationError)
+		api.failedValidationResponse(w, validationError)
 		return
 	}
 	existingResetToken, err := api.models.ResetTokens.GetByToken(req.ResetToken)

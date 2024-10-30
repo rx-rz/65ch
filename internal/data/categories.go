@@ -114,8 +114,8 @@ func (m CategoryModel) DeleteByName(name string) (ModifiedData, error) {
 
 }
 
-func (m CategoryModel) DeleteByID(id string) (ModifiedData, error) {
-	q := `DELETE FROM categories WHERE name = $1`
+func (m CategoryModel) DeleteByID(id int) (ModifiedData, error) {
+	q := `DELETE FROM categories WHERE id = $1`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, q, id)
@@ -123,7 +123,7 @@ func (m CategoryModel) DeleteByID(id string) (ModifiedData, error) {
 		return ModifiedData{}, DetermineDBError(err, "category_deletebyname")
 	}
 	return ModifiedData{
-		ID:        id,
+		ID:        strconv.Itoa(id),
 		Timestamp: time.Now(),
 	}, nil
 

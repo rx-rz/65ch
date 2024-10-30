@@ -3,6 +3,7 @@ package rest
 import (
 	"errors"
 	"github.com/rx-rz/65ch/internal/data"
+	"github.com/rx-rz/65ch/internal/utils"
 	"net/http"
 	"time"
 )
@@ -69,6 +70,17 @@ func (api *API) invalidTokenResponse(w http.ResponseWriter, r *http.Request) {
 }
 func (api *API) unauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 	api.errorResponse(w, r, http.StatusUnauthorized, "You are not authorised to use this resourece", false)
+}
+func (api *API) badRequestResponse(w http.ResponseWriter, err error, message string) {
+	api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, message, err)
+}
+
+func (api *API) failedValidationResponse(w http.ResponseWriter, err error) {
+	api.writeErrorResponse(w, http.StatusBadRequest, ErrBadRequest, utils.GetValidationErrors(err), err)
+}
+
+func (api *API) conflictResponse(w http.ResponseWriter, message string) {
+	api.writeErrorResponse(w, http.StatusConflict, ErrDuplicateEntry, message, nil)
 }
 
 func (api *API) internalServerErrorResponse(w http.ResponseWriter, r *http.Request, err error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
 )
@@ -45,11 +46,9 @@ func (api *API) readJSON(w http.ResponseWriter, r *http.Request, dest any) error
 	return nil
 }
 
-func (api *API) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) {
+func (api *API) writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
-	for k, v := range headers {
-		w.Header()[k] = v
-	}
+
 	js, err := json.Marshal(data)
 	if err != nil {
 		api.logger.PrintError(err, nil)
@@ -60,4 +59,13 @@ func (api *API) writeJSON(w http.ResponseWriter, status int, data any, headers h
 	if err != nil {
 		api.logger.PrintError(err, nil)
 	}
+}
+
+func (api *API) readParam(r *http.Request, name string) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+	param := params.ByName(name)
+	if param == "" {
+		return "", errors.New("invalid parameter")
+	}
+	return param, nil
 }
