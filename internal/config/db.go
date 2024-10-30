@@ -20,7 +20,6 @@ func InitializeDB() (DB *sql.DB, err error) {
 		return nil, err
 	}
 	db.SetConnMaxIdleTime(duration)
-
 	// connect to the db, throw error after a maximum of 5 secs with no connection.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

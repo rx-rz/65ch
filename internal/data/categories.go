@@ -8,8 +8,10 @@ import (
 )
 
 type Category struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"last_updated_at"`
 }
 
 type CategoryModel struct {
@@ -19,11 +21,11 @@ type CategoryModel struct {
 func (m CategoryModel) Create(name string) (*Category, error) {
 	var category Category
 	q := `
-	INSERT INTO categories (name) VALUES ($1) RETURNING id, name
+	INSERT INTO categories (name) VALUES ($1) RETURNING id, name, created_at, updated_at
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, name).Scan(&category.ID, &category.Name)
+	err := m.DB.QueryRowContext(ctx, q, name).Scan(&category.ID, &category.Name, &category.CreatedAt, &category.UpdatedAt)
 	if err != nil {
 		return nil, DetermineDBError(err, "category_create")
 	}
@@ -32,7 +34,7 @@ func (m CategoryModel) Create(name string) (*Category, error) {
 
 func (m CategoryModel) GetAll() ([]*Category, error) {
 	q := `
-	SELECT id, name FROM categories	
+	SELECT id, name FROM categories	ORDER BY created_at DESC 
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
@@ -43,12 +45,12 @@ func (m CategoryModel) GetAll() ([]*Category, error) {
 	defer rows.Close()
 	var categories []*Category
 	for rows.Next() {
-		var c *Category
+		var c Category
 		err := rows.Scan(&c.ID, &c.Name)
 		if err != nil {
 			return nil, DetermineDBError(err, "category_getall")
 		}
-		categories = append(categories, c)
+		categories = append(categories, &c)
 	}
 	return categories, nil
 }
@@ -56,11 +58,11 @@ func (m CategoryModel) GetAll() ([]*Category, error) {
 func (m CategoryModel) GetByName(name string) (*Category, error) {
 	var category Category
 	q := `
-	SELECT id, name FROM categories WHERE name = $1
+	SELECT id, name, created_at, updated_at FROM categories WHERE name = $1 ORDER BY id DESC
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, name).Scan(&category.ID, &category.Name)
+	err := m.DB.QueryRowContext(ctx, q, name).Scan(&category.ID, &category.Name, &category.CreatedAt, &category.UpdatedAt)
 	if err != nil {
 		return nil, DetermineDBError(err, "category_getbyname")
 	}
@@ -70,11 +72,11 @@ func (m CategoryModel) GetByName(name string) (*Category, error) {
 func (m CategoryModel) GetByID(id string) (*Category, error) {
 	var category Category
 	q := `
-	SELECT id, name FROM categories WHERE id = $1
+	SELECT id, name, created_at, updated_at FROM categories WHERE id = $1
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, id).Scan(&category.ID, &category.Name)
+	err := m.DB.QueryRowContext(ctx, q, id).Scan(&category.ID, &category.Name, &category.CreatedAt, &category.UpdatedAt)
 	if err != nil {
 		return nil, DetermineDBError(err, "category_getbyid")
 	}
@@ -83,7 +85,7 @@ func (m CategoryModel) GetByID(id string) (*Category, error) {
 
 func (m CategoryModel) UpdateName(category Category) (ModifiedData, error) {
 	q := `
-	UPDATE categories SET name = $1 WHERE id = $2 
+	UPDATE categories SET name = $1, updated_at = current_timestamp WHERE id = $2 
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()

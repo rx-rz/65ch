@@ -42,7 +42,6 @@ func (api *API) createCategoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.writeSuccessResponse(w, http.StatusCreated, envelope{"category": category}, "Category created successfully")
-
 }
 
 func (api *API) getCategoriesHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +60,7 @@ type UpdateCategoryRequest struct {
 
 func (api *API) updateCategoryNameHandler(w http.ResponseWriter, r *http.Request) {
 	var req UpdateCategoryRequest
-	err := api.readJSON(w, r, req)
+	err := api.readJSON(w, r, &req)
 	if err != nil {
 		api.badRequestResponse(w, err, err.Error())
 		return
