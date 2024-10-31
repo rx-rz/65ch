@@ -24,6 +24,7 @@ func InitializeAPI(cfg *config.Config) *http.Server {
 
 	api.initializeUserRoutes()
 	api.initializeCategoryRoutes()
+	api.initializeTagRoutes()
 
 	return &http.Server{
 		Handler:      api.router,
