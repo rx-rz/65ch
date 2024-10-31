@@ -89,7 +89,7 @@ func (m TagModel) UpdateName(tag Tag) (ModifiedData, error) {
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
-	args := []any{tag.Name, tag.ID}
+	args := []any{&tag.Name, &tag.ID}
 	_, err := m.DB.ExecContext(ctx, q, args...)
 	if err != nil {
 		return ModifiedData{}, DetermineDBError(err, "tag_updatename")

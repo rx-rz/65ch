@@ -10,8 +10,10 @@ import (
 
 func (api *API) initializeTagRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/tags", api.createTagHandler)
-	api.router.HandlerFunc(http.MethodPut, "/v1/tags", api.updateTagHandler)
+	api.router.HandlerFunc(http.MethodPatch, "/v1/tags", api.updateTagHandler)
+	api.router.HandlerFunc(http.MethodGet, "/v1/tags", api.getTagsHandler)
 	api.router.HandlerFunc(http.MethodDelete, "/v1/tags/:id", api.deleteTagHandler)
+
 }
 
 type CreateTagRequest struct {
@@ -69,6 +71,15 @@ func (api *API) updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "Tag updated successfully")
+}
+
+func (api *API) getTagsHandler(w http.ResponseWriter, r *http.Request) {
+	tags, err := api.models.Tags.GetAll()
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"tags": tags}, "")
 }
 
 func (api *API) deleteTagHandler(w http.ResponseWriter, r *http.Request) {
