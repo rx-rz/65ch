@@ -154,7 +154,7 @@ func (m *UserModel) UpdateEmail(ctx context.Context, email, newEmail string) (*M
 	RETURNING id
 	`
 
-	updatedUser := &User{}
+	data := &ModifiedData{}
 	updateTimestamp := time.Now().UTC()
 
 	err := m.DB.QueryRowContext(
@@ -164,17 +164,13 @@ func (m *UserModel) UpdateEmail(ctx context.Context, email, newEmail string) (*M
 		updateTimestamp,
 		email,
 	).Scan(
-		&updatedUser.ID,
+		&data.ID,
 	)
 	if err != nil {
 		return nil, DetermineDBError(err, "user_updateemail")
 	}
-
-	return &ModifiedData{
-			ID:        updatedUser.ID,
-			Timestamp: updateTimestamp,
-		},
-		DetermineDBError(err, "user_updateemail")
+	data.Timestamp = updateTimestamp
+	return data, DetermineDBError(err, "user_updateemail")
 }
 
 func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword string) (*ModifiedData, error) {
@@ -184,7 +180,7 @@ func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword strin
 	WHERE email = $3
 	`
 
-	updatedUser := &User{}
+	data := &ModifiedData{}
 	updateTimestamp := time.Now().UTC()
 
 	err := m.DB.QueryRowContext(
@@ -194,16 +190,12 @@ func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword strin
 		updateTimestamp,
 		email,
 	).Scan(
-		&updatedUser.ID,
+		&data.ID,
 	)
 
 	if err != nil {
 		return nil, DetermineDBError(err, "user_updatepassword")
 	}
-
-	return &ModifiedData{
-			ID:        updatedUser.ID,
-			Timestamp: updateTimestamp,
-		},
-		DetermineDBError(err, "user_updatepassword")
+	data.Timestamp = updateTimestamp
+	return data, DetermineDBError(err, "user_updatepassword")
 }
