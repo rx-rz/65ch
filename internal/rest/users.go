@@ -37,6 +37,8 @@ type CreateUserRequest struct {
 }
 
 func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
 	var req CreateUserRequest
 
 	err := api.readJSON(w, r, &req)
@@ -55,7 +57,7 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		api.internalServerErrorResponse(w, r, err)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(ctx, req.Email)
 	if user != nil {
 		api.conflictResponse(w, "User with email already exists")
 		return
@@ -73,7 +75,7 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		ProfilePicUrl: req.ProfilePictureUrl,
 	}
 
-	err = api.models.Users.Create(user)
+	_, err = api.models.Users.Create(ctx, user)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -99,6 +101,9 @@ type LoginUserRequest struct {
 }
 
 func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req LoginUserRequest
 
 	err := api.readJSON(w, r, &req)
@@ -113,7 +118,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -152,6 +157,9 @@ type GetUserDetailsRequest struct {
 }
 
 func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	req := GetUserDetailsRequest{
 		ID: ps.ByName("id"),
 	}
@@ -160,7 +168,7 @@ func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByID(req.ID)
+	user, err := api.models.Users.FindByID(ctx, req.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -186,6 +194,9 @@ type UpdateUserDetailsRequest struct {
 }
 
 func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req UpdateUserDetailsRequest
 	v := validator.New()
 	err := api.readJSON(w, r, &req)
@@ -198,7 +209,7 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByID(req.ID)
+	user, err := api.models.Users.FindByID(ctx, req.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -218,12 +229,12 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 	if req.Activated != nil {
 		user.Activated = *req.Activated
 	}
-	_, err = api.models.Users.UpdateDetails(user)
+	updateInfo, err := api.models.Users.UpdateDetails(ctx, user)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeSuccessResponse(w, http.StatusOK, nil, "User updated successfully")
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User updated successfully")
 }
 
 type UpdateUserEmailRequest struct {
@@ -233,6 +244,9 @@ type UpdateUserEmailRequest struct {
 }
 
 func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req UpdateUserEmailRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -244,7 +258,7 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -254,12 +268,12 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 		api.badRequestResponse(w, err, "Invalid details provided")
 		return
 	}
-	err = api.models.Users.UpdateEmail(req.Email, req.NewEmail)
+	updateInfo, err := api.models.Users.UpdateEmail(ctx, req.Email, req.NewEmail)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeSuccessResponse(w, http.StatusOK, nil, "User email updated successfully")
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User email updated successfully")
 }
 
 type UpdateUserPasswordRequest struct {
@@ -269,6 +283,9 @@ type UpdateUserPasswordRequest struct {
 }
 
 func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req UpdateUserPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -282,7 +299,7 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, err := api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -294,12 +311,12 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	hashedPassword, _ := utils.HashPassword(req.NewPassword)
-	err = api.models.Users.UpdatePassword(req.Email, hashedPassword)
+	updateInfo, err := api.models.Users.UpdatePassword(ctx, req.Email, hashedPassword)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeSuccessResponse(w, http.StatusOK, nil, "User password updated successfully")
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User password updated successfully")
 
 }
 
@@ -308,6 +325,9 @@ type ResetPasswordRequest struct {
 }
 
 func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req ResetPasswordRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -320,7 +340,7 @@ func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Reque
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(req.Email)
+	user, err := api.models.Users.FindByEmail(ctx, req.Email)
 	if user == nil {
 		api.writeSuccessResponse(w, http.StatusOK, nil, "Token has been sent to your email if you have an account")
 		return
@@ -363,6 +383,9 @@ type ResetPasswordFormRequest struct {
 }
 
 func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req ResetPasswordFormRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -391,13 +414,13 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		api.handleDBError(w, r, err)
 		return
 	}
-	user, err := api.models.Users.FindByID(existingResetToken.UserID)
+	user, err := api.models.Users.FindByID(ctx, existingResetToken.UserID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
 	hashedPassword, err := utils.HashPassword(req.NewPassword)
-	err = api.models.Users.UpdatePassword(user.Email, hashedPassword)
+	updateInfo, err := api.models.Users.UpdatePassword(ctx, user.Email, hashedPassword)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -407,5 +430,5 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		api.handleDBError(w, r, err)
 		return
 	}
-	api.writeSuccessResponse(w, http.StatusOK, nil, "User password reset successfully")
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User password reset successfully")
 }

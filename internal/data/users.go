@@ -24,7 +24,7 @@ type User struct {
 	UpdatedAt     time.Time `db:"updated_at"`
 }
 
-func (m *UserModel) Create(user *User) (*User, error) {
+func (m *UserModel) Create(ctx context.Context, user *User) (*User, error) {
 	const query = `
 	INSERT INTO users (first_name, last_name, email, password_hash, bio, profile_picture_url)
 	VALUES ($1, $2, $3, $4, $5, $6)
@@ -36,8 +36,6 @@ func (m *UserModel) Create(user *User) (*User, error) {
 	if user.ProfilePicUrl == "" {
 		user.ProfilePicUrl = "https://placehold.co/400?text=U"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	newUser := &User{}
 	err := m.DB.QueryRowContext(
 		ctx,
@@ -59,14 +57,12 @@ func (m *UserModel) Create(user *User) (*User, error) {
 	return newUser, DetermineDBError(err, "user_create")
 }
 
-func (m *UserModel) FindByEmail(email string) (*User, error) {
+func (m *UserModel) FindByEmail(ctx context.Context, email string) (*User, error) {
 	const query = `
 	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url
 	FROM users
 	WHERE email = $1
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
 	user := &User{}
 	err := m.DB.QueryRowContext(
 		ctx,
@@ -87,14 +83,13 @@ func (m *UserModel) FindByEmail(email string) (*User, error) {
 	return user, nil
 }
 
-func (m *UserModel) FindByID(id string) (*User, error) {
+func (m *UserModel) FindByID(ctx context.Context, id string) (*User, error) {
 	const query = `
 	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url
 	FROM users
 	WHERE id = $1
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
+
 	user := &User{}
 	err := m.DB.QueryRowContext(
 		ctx,
@@ -115,7 +110,7 @@ func (m *UserModel) FindByID(id string) (*User, error) {
 	return user, nil
 }
 
-func (m *UserModel) UpdateDetails(user *User) (*User, error) {
+func (m *UserModel) UpdateDetails(ctx context.Context, user *User) (*User, error) {
 	const query = `
 	UPDATE users SET 
 		first_name = $1, 
@@ -126,9 +121,6 @@ func (m *UserModel) UpdateDetails(user *User) (*User, error) {
 	WHERE id = $6
 	RETURNING id, first_name, last_name, bio, profile_picture_url, activated
 	`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 
 	updatedUser := &User{}
 	err := m.DB.QueryRowContext(
@@ -154,16 +146,13 @@ func (m *UserModel) UpdateDetails(user *User) (*User, error) {
 	return updatedUser, nil
 }
 
-func (m *UserModel) UpdateEmail(email, newEmail string) (*ModifiedData, error) {
+func (m *UserModel) UpdateEmail(ctx context.Context, email, newEmail string) (*ModifiedData, error) {
 	const query = `
 	UPDATE users 
 	SET email = $1, updated_at = $2
 	WHERE email = $3
 	RETURNING id
 	`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 
 	updatedUser := &User{}
 	updateTimestamp := time.Now().UTC()
@@ -188,15 +177,12 @@ func (m *UserModel) UpdateEmail(email, newEmail string) (*ModifiedData, error) {
 		DetermineDBError(err, "user_updateemail")
 }
 
-func (m *UserModel) UpdatePassword(email, newPassword string) (*ModifiedData, error) {
+func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword string) (*ModifiedData, error) {
 	q := `
 	UPDATE users 
 	SET password_hash = $1, updated_at = $2
 	WHERE email = $3
 	`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 
 	updatedUser := &User{}
 	updateTimestamp := time.Now().UTC()
