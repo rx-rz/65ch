@@ -21,6 +21,9 @@ type CreateTagRequest struct {
 }
 
 func (api *API) createTagHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req CreateTagRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -32,12 +35,12 @@ func (api *API) createTagHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	existingTag, _ := api.models.Tags.GetByName(req.Name)
+	existingTag, _ := api.models.Tags.GetByName(ctx, req.Name)
 	if existingTag != nil {
 		api.conflictResponse(w, fmt.Sprintf("Tag with name %s already exists", req.Name))
 		return
 	}
-	tag, err := api.models.Tags.Create(req.Name)
+	tag, err := api.models.Tags.Create(ctx, req.Name)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -51,6 +54,9 @@ type UpdateTagRequest struct {
 }
 
 func (api *API) updateTagHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req UpdateTagRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -62,7 +68,7 @@ func (api *API) updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	updateInfo, err := api.models.Tags.UpdateName(data.Tag{
+	updateInfo, err := api.models.Tags.UpdateName(ctx, &data.Tag{
 		Name: req.Name,
 		ID:   req.ID,
 	})
@@ -74,7 +80,10 @@ func (api *API) updateTagHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) getTagsHandler(w http.ResponseWriter, r *http.Request) {
-	tags, err := api.models.Tags.GetAll()
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
+	tags, err := api.models.Tags.GetAll(ctx)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -83,17 +92,22 @@ func (api *API) getTagsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) deleteTagHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	param, err := api.readParam(r, "id")
 	if err != nil {
 		api.badRequestResponse(w, err, "ID param not provided")
 		return
 	}
+
 	id, err := strconv.Atoi(param)
 	if err != nil {
 		api.badRequestResponse(w, err, "ID param must be an integer")
 		return
 	}
-	deleteInfo, err := api.models.Tags.Delete(id)
+
+	deleteInfo, err := api.models.Tags.Delete(ctx, id)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return

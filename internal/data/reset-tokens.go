@@ -117,24 +117,26 @@ func (m ResetTokenModel) Update(ctx context.Context, resetToken *ResetToken) (*M
 	return data, nil
 }
 
-func (m ResetTokenModel) DeleteByUserId(ctx context.Context, userId string) error {
+func (m ResetTokenModel) DeleteByUserId(ctx context.Context, userId string) (*ModifiedData, error) {
 	const query = `
 	DELETE FROM reset_tokens 
 	WHERE user_id = $1
 	RETURNING id
 	`
-	data := &ModifiedData{
-		Timestamp: time.Now().UTC(),
-	}
+	data := &ModifiedData{}
 	err := m.DB.QueryRowContext(
 		ctx,
 		query,
 		userId,
 	).Scan(&data.ID)
-	return DetermineDBError(err, "resettoken_delete")
+	if err != nil {
+		return nil, DetermineDBError(err, "resettoken_delete")
+	}
+	data.Timestamp = time.Now().UTC()
+	return data, nil
 }
 
-func (m ResetTokenModel) DeleteByToken(ctx context.Context, token string) error {
+func (m ResetTokenModel) DeleteByToken(ctx context.Context, token string) (*ModifiedData, error) {
 	const query = `
 	DELETE FROM reset_tokens 
 	WHERE reset_token = $1
@@ -148,5 +150,8 @@ func (m ResetTokenModel) DeleteByToken(ctx context.Context, token string) error 
 		query,
 		token,
 	).Scan(&data.ID)
-	return DetermineDBError(err, "resettoken_delete")
+	if err != nil {
+		return nil, DetermineDBError(err, "resettoken_delete")
+	}
+	return data, nil
 }

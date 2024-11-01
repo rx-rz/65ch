@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"strconv"
 	"time"
 )
 
@@ -18,99 +17,139 @@ type TagModel struct {
 	DB *sql.DB
 }
 
-func (m TagModel) Create(name string) (*Tag, error) {
-	var tag Tag
-	q := `
-	INSERT INTO tags (name) VALUES ($1) RETURNING id, name, created_at, updated_at
+func (m *TagModel) Create(ctx context.Context, name string) (*Tag, error) {
+	const query = `
+	INSERT INTO tags (name)
+	VALUES ($1) 
+	RETURNING id, name, created_at, updated_at
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, name).Scan(&tag.ID, &tag.Name, &tag.CreatedAt, &tag.UpdatedAt)
+	newTag := &Tag{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		name,
+	).Scan(
+		&newTag.ID,
+		&newTag.Name,
+		&newTag.CreatedAt,
+		&newTag.UpdatedAt,
+	)
 	if err != nil {
 		return nil, DetermineDBError(err, "tag_create")
 	}
-	return &tag, nil
+	return newTag, nil
 }
 
-func (m TagModel) GetAll() ([]*Tag, error) {
-	q := `
-	SELECT id, name FROM tags	ORDER BY created_at DESC 
+func (m *TagModel) GetAll(ctx context.Context) ([]*Tag, error) {
+	const query = `
+	SELECT id, name 
+	FROM tags	
+	ORDER BY created_at DESC 
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	rows, err := m.DB.QueryContext(ctx, q)
+
+	rows, err := m.DB.QueryContext(ctx, query)
+
 	if err != nil {
 		return nil, DetermineDBError(err, "tag_getall")
 	}
 	defer rows.Close()
+
 	var tags []*Tag
+
 	for rows.Next() {
-		var c Tag
-		err := rows.Scan(&c.ID, &c.Name)
+		var t Tag
+		err := rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, DetermineDBError(err, "tag_getall")
 		}
-		tags = append(tags, &c)
+		tags = append(tags, &t)
 	}
 	return tags, nil
 }
 
-func (m TagModel) GetByName(name string) (*Tag, error) {
-	var tag Tag
-	q := `
-	SELECT id, name, created_at, updated_at FROM tags WHERE name = $1 ORDER BY id DESC
+func (m *TagModel) GetByName(ctx context.Context, name string) (*Tag, error) {
+	const query = `
+	SELECT id, name, created_at, updated_at 
+	FROM tags 
+	WHERE name = $1 
+	ORDER BY id DESC
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, name).Scan(&tag.ID, &tag.Name, &tag.CreatedAt, &tag.UpdatedAt)
+	tag := &Tag{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		name,
+	).Scan(
+		&tag.ID,
+		&tag.Name,
+		&tag.CreatedAt,
+		&tag.UpdatedAt,
+	)
 	if err != nil {
 		return nil, DetermineDBError(err, "tag_getbyname")
 	}
-	return &tag, nil
+	return tag, nil
 }
 
-func (m TagModel) GetByID(id string) (*Tag, error) {
-	var tag Tag
-	q := `
-	SELECT id, name, created_at, updated_at FROM tags WHERE id = $1
+func (m *TagModel) GetByID(ctx context.Context, id string) (*Tag, error) {
+	const query = `
+	SELECT id, name, created_at, updated_at 
+	FROM tags 
+	WHERE id = $1 
+	ORDER BY id DESC
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	err := m.DB.QueryRowContext(ctx, q, id).Scan(&tag.ID, &tag.Name, &tag.CreatedAt, &tag.UpdatedAt)
+	tag := &Tag{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&tag.ID,
+		&tag.Name,
+		&tag.CreatedAt,
+		&tag.UpdatedAt,
+	)
 	if err != nil {
 		return nil, DetermineDBError(err, "tag_getbyid")
 	}
-	return &tag, nil
+	return tag, nil
 }
 
-func (m TagModel) UpdateName(tag Tag) (ModifiedData, error) {
-	q := `
-	UPDATE tags SET name = $1, updated_at = current_timestamp WHERE id = $2 
+func (m *TagModel) UpdateName(ctx context.Context, tag *Tag) (*ModifiedData, error) {
+	const query = `
+	UPDATE tags SET name = $1, 
+	updated_at = $2 
+	WHERE id = $3
 	`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	args := []any{&tag.Name, &tag.ID}
-	_, err := m.DB.ExecContext(ctx, q, args...)
+	data := &ModifiedData{}
+	updateTimestamp := time.Now().UTC()
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		tag.Name,
+		updateTimestamp,
+		tag.ID,
+	).Scan(&data.ID)
+
 	if err != nil {
-		return ModifiedData{}, DetermineDBError(err, "tag_updatename")
+		return nil, DetermineDBError(err, "tag_updatename")
 	}
-	return ModifiedData{
-		ID:        strconv.Itoa(tag.ID),
-		Timestamp: time.Now(),
-	}, nil
+	data.Timestamp = updateTimestamp
+	return data, nil
 }
 
-func (m TagModel) Delete(id int) (ModifiedData, error) {
-	q := `DELETE FROM tags WHERE id = $1`
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-	_, err := m.DB.ExecContext(ctx, q, id)
-	if err != nil {
-		return ModifiedData{}, DetermineDBError(err, "tag_deletebyname")
+func (m *TagModel) Delete(ctx context.Context, id int) (*ModifiedData, error) {
+	const query = `
+	   DELETE FROM tags 
+       WHERE id = $1
+	`
+	data := &ModifiedData{
+		Timestamp: time.Now().UTC(),
 	}
-	return ModifiedData{
-		ID:        strconv.Itoa(id),
-		Timestamp: time.Now(),
-	}, nil
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&data.ID)
+	if err != nil {
+		return data, DetermineDBError(err, "tag_deletebyname")
+	}
+	return data, nil
 
 }

@@ -351,10 +351,10 @@ func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	resetToken, expiration := utils.GenerateResetToken()
-	previousResetToken, err := api.models.ResetTokens.GetByUserID(user.ID)
+	previousResetToken, err := api.models.ResetTokens.GetByUserID(ctx, user.ID)
 
 	if previousResetToken == nil {
-		err = api.models.ResetTokens.Create(&data.ResetToken{
+		_, err = api.models.ResetTokens.Create(ctx, &data.ResetToken{
 			ResetToken: resetToken,
 			Expiration: expiration,
 			UserID:     user.ID,
@@ -364,7 +364,7 @@ func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 	} else {
-		err = api.models.ResetTokens.Update(&data.ResetToken{
+		_, err = api.models.ResetTokens.Update(ctx, &data.ResetToken{
 			ResetToken: resetToken,
 			Expiration: expiration,
 			UserID:     user.ID,
@@ -398,10 +398,10 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	existingResetToken, err := api.models.ResetTokens.GetByToken(req.ResetToken)
+	existingResetToken, err := api.models.ResetTokens.GetByToken(ctx, req.ResetToken)
 
 	if existingResetToken.Expiration.UTC().Before(time.Now().UTC()) {
-		err = api.models.ResetTokens.DeleteByToken(req.ResetToken)
+		_, err = api.models.ResetTokens.DeleteByToken(ctx, req.ResetToken)
 		if err != nil {
 			api.handleDBError(w, r, err)
 			return
@@ -425,7 +425,7 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		api.handleDBError(w, r, err)
 		return
 	}
-	err = api.models.ResetTokens.DeleteByUserId(user.ID)
+	_, err = api.models.ResetTokens.DeleteByUserId(ctx, user.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
