@@ -57,7 +57,7 @@ func (api *API) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		api.internalServerErrorResponse(w, r, err)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(ctx, req.Email)
+	user, err := api.models.Users.GetByEmail(ctx, req.Email)
 	if user != nil {
 		api.conflictResponse(w, "User with email already exists")
 		return
@@ -118,7 +118,7 @@ func (api *API) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := api.models.Users.FindByEmail(ctx, req.Email)
+	user, err := api.models.Users.GetByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -168,7 +168,7 @@ func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByID(ctx, req.ID)
+	user, err := api.models.Users.GetByID(ctx, req.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -209,7 +209,7 @@ func (api *API) updateUserDetailsHandler(w http.ResponseWriter, r *http.Request)
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByID(ctx, req.ID)
+	user, err := api.models.Users.GetByID(ctx, req.ID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -258,7 +258,7 @@ func (api *API) updateUserEmailHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(ctx, req.Email)
+	user, err := api.models.Users.GetByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -299,7 +299,7 @@ func (api *API) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, err := api.models.Users.FindByEmail(ctx, req.Email)
+	user, err := api.models.Users.GetByEmail(ctx, req.Email)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
@@ -340,7 +340,7 @@ func (api *API) resetPasswordRequestHandler(w http.ResponseWriter, r *http.Reque
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	user, err := api.models.Users.FindByEmail(ctx, req.Email)
+	user, err := api.models.Users.GetByEmail(ctx, req.Email)
 	if user == nil {
 		api.writeSuccessResponse(w, http.StatusOK, nil, "Token has been sent to your email if you have an account")
 		return
@@ -414,7 +414,7 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		api.handleDBError(w, r, err)
 		return
 	}
-	user, err := api.models.Users.FindByID(ctx, existingResetToken.UserID)
+	user, err := api.models.Users.GetByID(ctx, existingResetToken.UserID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return

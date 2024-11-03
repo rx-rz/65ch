@@ -27,6 +27,7 @@ func InitializeAPI(cfg *config.Config) *http.Server {
 	api.initializeUserRoutes()
 	api.initializeCategoryRoutes()
 	api.initializeTagRoutes()
+	api.initializeArticleRoutes()
 
 	return &http.Server{
 		Handler:      api.router,
@@ -38,5 +39,5 @@ func InitializeAPI(cfg *config.Config) *http.Server {
 }
 
 func (api *API) CreateContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 10*time.Second)
+	return context.WithTimeout(context.Background(), 10000*time.Second)
 }

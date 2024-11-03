@@ -3,7 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 	"time"
 )
 
@@ -12,6 +12,8 @@ type Article struct {
 	AuthorID    string    `json:"author_id"`
 	Title       string    `json:"title"`
 	Status      string    `json:"status"`
+	Category    string    `json:"category"`
+	TagIDs      []int     `json:"tag_ids,omitempty"`
 	CategoryID  string    `json:"category_id"`
 	Content     string    `json:"content"`
 	Tags        []string  `json:"tags,omitempty"`
@@ -24,94 +26,62 @@ type ArticleModel struct {
 	DB *sql.DB
 }
 
-//func (m *ArticleModel) Create(article *Article) (*Article, error) {
-//	var a Article
-//
-//	q := `INSERT INTO articles (author_id, title, content, category_id) VALUES ($1, $2, $3) RETURNING author_id, title, content, category_id`
-//	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-//	defer cancel()
-//	args := []any{article.AuthorID, article.Title, article.Content, article.CategoryID}
-//	err := m.DB.QueryRowContext(ctx, q, args).Scan(&a.AuthorID, &a.Title, &a.Content, &a.CategoryID)
-//	if err != nil {
-//		return nil, DetermineDBError(err, "article_create")
-//	}
-//	return &a, nil
-//}
-
-func (m *ArticleModel) CreateA(article *Article) (*Article, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
+func (m *ArticleModel) Create(ctx context.Context, article *Article) (*Article, error) {
 	tx, err := m.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, DetermineDBError(err, "article_create")
 	}
 	defer tx.Rollback()
-	q := `
-		INSERT INTO articles (author_id, title, content, category_id)
-        VALUES ($1, $2, $3)
-        RETURNING id, author_id, title, content, category_id
+
+	const query = `
+	INSERT INTO articles (author_id, title, content, status)
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, author_id, title, content, status
 	`
 	newArticle := &Article{}
 	err = tx.QueryRowContext(
 		ctx,
-		q,
+		query,
 		article.AuthorID,
 		article.Title,
 		article.Content,
-		article.CategoryID,
+		article.Status,
 	).Scan(
 		&newArticle.ID,
 		&newArticle.AuthorID,
 		&newArticle.Title,
 		&newArticle.Content,
-		&newArticle.CategoryID,
+		&newArticle.Status,
 	)
 	if err != nil {
 		return nil, DetermineDBError(err, "article_create")
 	}
-	if len(article.Tags) > 0 {
-		err = m.attachTags(ctx, tx, newArticle.ID, article.Tags)
+	if len(article.TagIDs) > 0 {
+		err = m.attachTags(ctx, tx, newArticle.ID, article.TagIDs)
 		if err != nil {
-			return nil, DetermineDBError(err, "article_create")
+			return nil, DetermineDBError(err, "article_attachtags")
 		}
-
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("committing transaction: %w", err)
+		return nil, DetermineDBError(err, "article_create")
 	}
 	if len(article.Tags) > 0 {
 		newArticle.Tags = article.Tags
 	}
-
 	return newArticle, nil
 }
 
-func (m *ArticleModel) attachTags(ctx context.Context, tx *sql.Tx, articleID string, tags []string) error {
-	// First ensure all tags exist, creating any that don't
-	for _, tag := range tags {
-		const upsertTagQuery = `
-            INSERT INTO tags (name)
-            VALUES ($1)
-            ON CONFLICT (name) DO NOTHING`
-
-		_, err := tx.ExecContext(ctx, upsertTagQuery, tag)
+func (m *ArticleModel) attachTags(ctx context.Context, tx *sql.Tx, articleID string, tagIDs []int) error {
+	const query = `
+	INSERT INTO article_tags (article_id, tag_id)
+	VALUES ($1, $2)
+	`
+	for _, tagID := range tagIDs {
+		_, err := tx.ExecContext(ctx, query, articleID, tagID)
 		if err != nil {
-			return fmt.Errorf("upserting tag %q: %w", tag, err)
+			return errors.New("error occured in tag attachment")
 		}
 	}
-
-	// Then create the article-tag relationships
-	const createArticleTagQuery = `
-        INSERT INTO article_tags (article_id, tag_id)
-        SELECT $1, id FROM tags WHERE name = $2`
-
-	for _, tag := range tags {
-		_, err := tx.ExecContext(ctx, createArticleTagQuery, articleID, tag)
-		if err != nil {
-			return fmt.Errorf("linking article to tag %q: %w", tag, err)
-		}
-	}
-
 	return nil
 }
 

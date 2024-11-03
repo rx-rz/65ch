@@ -63,6 +63,7 @@ func (api *API) updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		api.badRequestResponse(w, err, err.Error())
 		return
 	}
+
 	v := validator.New()
 	if validationError := v.Struct(req); validationError != nil {
 		api.failedValidationResponse(w, validationError)

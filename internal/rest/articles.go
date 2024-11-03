@@ -4,21 +4,26 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/rx-rz/65ch/internal/data"
 	"net/http"
+	"strconv"
 )
 
 func (api *API) initializeArticleRoutes() {
+	api.router.HandlerFunc(http.MethodPost, "/v1/articles", api.publishArticleHandler)
 
 }
 
 type CreateArticleRequest struct {
-	AuthorID string   `json:"author_id" validate:"required,string"`
-	Title    string   `json:"title" validate:"required,string"`
-	Content  string   `json:"content" validate:"required,string"`
-	Tags     []string `json:"tags"`
-	Category string   `json:"category" validate:"required"`
+	AuthorID   string `json:"author_id" validate:"required"`
+	Title      string `json:"title" validate:"required"`
+	Content    string `json:"content" validate:"required"`
+	TagIDs     []int  `json:"tag_ids"`
+	CategoryID int    `json:"category_id" validate:"required"`
 }
 
-func (api *API) createArticleHandler(w http.ResponseWriter, r *http.Request) {
+func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
 	var req CreateArticleRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -30,27 +35,31 @@ func (api *API) createArticleHandler(w http.ResponseWriter, r *http.Request) {
 		api.failedValidationResponse(w, validationError)
 		return
 	}
-	_, err = api.models.Users.FindByID(req.AuthorID)
+	_, err = api.models.Users.GetByID(ctx, req.AuthorID)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
 	}
-	err = api.models.Articles.Create(&data.Article{
-		AuthorID: req.AuthorID,
-		Content:  req.Content,
-		Tags:     req.Tags,
-		Category: req.Category,
+	_, err = api.models.Categories.GetByID(strconv.Itoa(req.CategoryID))
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	_, err = api.models.Articles.Create(ctx, &data.Article{
+		AuthorID:   req.AuthorID,
+		Title:      req.Title,
+		Content:    req.Content,
+		CategoryID: strconv.Itoa(req.CategoryID),
+		Status:     "published",
+		TagIDs:     req.TagIDs,
 	})
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	api.writeSuccessResponse(w, http.StatusCreated, nil, "Article successfully published")
 }
-func (api *API) createArticleDraftHandler() {
-
-}
-
-func (api *API) publishOrArchiveArticleHandler() {
-
-}
-
-func (api *API) updateArticleHandler() {
+func (api *API) createArticleAsDraftHandler() {
 
 }
 

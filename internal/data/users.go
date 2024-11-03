@@ -57,7 +57,7 @@ func (m *UserModel) Create(ctx context.Context, user *User) (*User, error) {
 	return newUser, DetermineDBError(err, "user_create")
 }
 
-func (m *UserModel) FindByEmail(ctx context.Context, email string) (*User, error) {
+func (m *UserModel) GetByEmail(ctx context.Context, email string) (*User, error) {
 	const query = `
 	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url
 	FROM users
@@ -83,7 +83,7 @@ func (m *UserModel) FindByEmail(ctx context.Context, email string) (*User, error
 	return user, nil
 }
 
-func (m *UserModel) FindByID(ctx context.Context, id string) (*User, error) {
+func (m *UserModel) GetByID(ctx context.Context, id string) (*User, error) {
 	const query = `
 	SELECT first_name, last_name, email, id, password_hash, bio, profile_picture_url
 	FROM users
