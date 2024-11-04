@@ -10,9 +10,9 @@ import (
 
 func (api *API) initializeTagRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/tags", api.createTagHandler)
-	api.router.HandlerFunc(http.MethodPatch, "/v1/tags", api.updateTagHandler)
+	//api.router.HandlerFunc(http.MethodPatch, "/v1/tags", api.updateTagHandler)
 	api.router.HandlerFunc(http.MethodGet, "/v1/tags", api.getTagsHandler)
-	api.router.HandlerFunc(http.MethodDelete, "/v1/tags/:id", api.deleteTagHandler)
+	//api.router.HandlerFunc(http.MethodDelete, "/v1/tags/:id", api.deleteTagHandler)
 
 }
 

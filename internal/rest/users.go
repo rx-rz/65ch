@@ -432,3 +432,7 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User password reset successfully")
 }
+
+func (api *API) followUserHandler(w http.ResponseWriter, r *http.Request) {
+
+}

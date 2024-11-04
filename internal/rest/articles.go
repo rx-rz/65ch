@@ -49,7 +49,7 @@ func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
 		AuthorID:   req.AuthorID,
 		Title:      req.Title,
 		Content:    req.Content,
-		CategoryID: strconv.Itoa(req.CategoryID),
+		CategoryID: req.CategoryID,
 		Status:     "published",
 		TagIDs:     req.TagIDs,
 	})
@@ -59,8 +59,52 @@ func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	api.writeSuccessResponse(w, http.StatusCreated, nil, "Article successfully published")
 }
-func (api *API) createArticleAsDraftHandler() {
 
+type CreateDraftRequest struct {
+	ID         string  `json:"id" validate:"required"`
+	Title      *string `json:"title"`
+	Content    *string `json:"content"`
+	TagIDs     []int   `json:"tag_ids"`
+	CategoryID *int    `json:"category_id"`
+}
+
+func (api *API) createDraftHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
+	var req CreateDraftRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestResponse(w, err, err.Error())
+		return
+	}
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, validationError)
+		return
+	}
+	article := &data.Article{
+		TagIDs: req.TagIDs,
+		ID:     req.ID,
+	}
+	if req.Title != nil {
+		article.Title = *req.Title
+	}
+	if req.Content != nil {
+		article.Content = *req.Content
+	}
+	if req.CategoryID != nil {
+		article.CategoryID = *req.CategoryID
+	}
+
+	updateInfo, err := api.models.Articles.Update(ctx, article)
+	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "Draft successfully created")
+
+}
+
+func (api *API) getArticleDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	//ctx, cancel := api.CreateContext()
+	//defer cancel()
 }
 
 func (api *API) deleteArticleHandler() {
