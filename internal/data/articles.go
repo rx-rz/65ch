@@ -161,6 +161,7 @@ func (m *ArticleModel) Update(ctx context.Context, article *Article) (*ModifiedD
 	).Scan(
 		&data.ID,
 	)
+
 	if err != nil {
 		return nil, DetermineDBError(err, "article_update")
 	}
@@ -174,7 +175,7 @@ func (m *ArticleModel) Update(ctx context.Context, article *Article) (*ModifiedD
 		return nil, DetermineDBError(err, "article_create")
 	}
 	data.Timestamp = updateTimestamp
- 
+
 	return data, nil
 }
 
