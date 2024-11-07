@@ -9,15 +9,16 @@ import (
 
 func (api *API) initializeArticleRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/articles", api.publishArticleHandler)
-
+	api.router.HandlerFunc(http.MethodPost, "/v1/articles/draft", api.createDraftHandler)
 }
 
 type CreateArticleRequest struct {
-	AuthorID   string `json:"author_id" validate:"required"`
-	Title      string `json:"title" validate:"required"`
-	Content    string `json:"content" validate:"required"`
-	TagIDs     []int  `json:"tag_ids"`
-	CategoryID int    `json:"category_id" validate:"required"`
+	ID         *string `json:"id"`
+	AuthorID   string  `json:"author_id" validate:"required"`
+	Title      string  `json:"title" validate:"required"`
+	Content    string  `json:"content" validate:"required"`
+	TagIDs     []int   `json:"tag_ids"`
+	CategoryID int     `json:"category_id" validate:"required"`
 }
 
 func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,23 +46,35 @@ func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
 		api.handleDBError(w, r, err)
 		return
 	}
-	_, err = api.models.Articles.Create(ctx, &data.Article{
-		AuthorID:   req.AuthorID,
-		Title:      req.Title,
-		Content:    req.Content,
-		CategoryID: req.CategoryID,
-		Status:     "published",
-		TagIDs:     req.TagIDs,
-	})
-	if err != nil {
-		api.handleDBError(w, r, err)
-		return
+	if req.ID != nil {
+		_, err = api.models.Articles.Update(ctx, &data.Article{
+			ID:         *req.ID,
+			Title:      req.Title,
+			Content:    req.Content,
+			CategoryID: req.CategoryID,
+			Status:     "published",
+			TagIDs:     req.TagIDs,
+		})
+	} else {
+		_, err = api.models.Articles.Create(ctx, &data.Article{
+			AuthorID:   req.AuthorID,
+			Title:      req.Title,
+			Content:    req.Content,
+			CategoryID: req.CategoryID,
+			Status:     "published",
+			TagIDs:     req.TagIDs,
+		})
+		if err != nil {
+			api.handleDBError(w, r, err)
+			return
+		}
 	}
 	api.writeSuccessResponse(w, http.StatusCreated, nil, "Article successfully published")
 }
 
 type CreateDraftRequest struct {
-	ID         string  `json:"id" validate:"required"`
+	ID         *string `json:"id"`
+	AuthorID   string  `json:"author_id" validate:"required"`
 	Title      *string `json:"title"`
 	Content    *string `json:"content"`
 	TagIDs     []int   `json:"tag_ids"`
@@ -84,9 +97,14 @@ func (api *API) createDraftHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	article := &data.Article{
-		TagIDs: req.TagIDs,
-		ID:     req.ID,
+		AuthorID: req.AuthorID,
+		TagIDs:   req.TagIDs,
 	}
+
+	if req.ID != nil {
+		article.ID = *req.ID
+	}
+
 	if req.Title != nil {
 		article.Title = *req.Title
 	}
@@ -96,10 +114,22 @@ func (api *API) createDraftHandler(w http.ResponseWriter, r *http.Request) {
 	if req.CategoryID != nil {
 		article.CategoryID = *req.CategoryID
 	}
-
-	updateInfo, err := api.models.Articles.Update(ctx, article)
-	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "Draft successfully created")
-
+	article.Status = "draft"
+	if req.ID != nil {
+		updateInfo, err := api.models.Articles.Update(ctx, article)
+		if err != nil {
+			api.handleDBError(w, r, err)
+			return
+		}
+		api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "Draft successfully updated")
+	} else {
+		_, err := api.models.Articles.Create(ctx, article)
+		if err != nil {
+			api.handleDBError(w, r, err)
+			return
+		}
+		api.writeSuccessResponse(w, http.StatusOK, nil, "Draft created successfully")
+	}
 }
 
 func (api *API) getArticleDetailsHandler(w http.ResponseWriter, r *http.Request) {

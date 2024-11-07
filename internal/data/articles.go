@@ -34,11 +34,13 @@ func (m *ArticleModel) Create(ctx context.Context, article *Article) (*Article, 
 	defer tx.Rollback()
 
 	const query = `
-	INSERT INTO articles (author_id, title, content, status)
-	VALUES ($1, $2, $3, $4)
+	INSERT INTO articles (author_id, title, content, status, published_at)
+	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, author_id, title, content, status
 	`
 	newArticle := &Article{}
+	publishTimestamp := time.Now().UTC()
+
 	err = tx.QueryRowContext(
 		ctx,
 		query,
@@ -46,6 +48,7 @@ func (m *ArticleModel) Create(ctx context.Context, article *Article) (*Article, 
 		article.Title,
 		article.Content,
 		article.Status,
+		publishTimestamp,
 	).Scan(
 		&newArticle.ID,
 		&newArticle.AuthorID,
@@ -124,35 +127,54 @@ func (m *ArticleModel) GetByID(ctx context.Context, id string) (*Article, error)
 }
 
 func (m *ArticleModel) Update(ctx context.Context, article *Article) (*ModifiedData, error) {
+	tx, err := m.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, DetermineDBError(err, "article_create")
+	}
+	defer tx.Rollback()
+
 	const query = `
 	UPDATE articles 
 	SET title = $1, 
 		content = $2, 
 		status = $3,
-		updated_at = $4, 
-		published_at = $5 
-	WHERE id = $6 
+		category_id = $4,
+		updated_at = $5,
+		published_at = $6 
+	WHERE id = $7
 	RETURNING id
 	`
 
 	updateTimestamp := time.Now().UTC()
 	data := &ModifiedData{}
 
-	err := m.DB.QueryRowContext(
+	err = tx.QueryRowContext(
 		ctx,
 		query,
 		article.Title,
 		article.Content,
+		article.Status,
+		article.CategoryID,
 		updateTimestamp,
 		article.PublishedAt,
 		article.ID,
 	).Scan(
 		&data.ID,
 	)
-	data.Timestamp = updateTimestamp
 	if err != nil {
 		return nil, DetermineDBError(err, "article_update")
 	}
+	if len(article.TagIDs) > 0 {
+		err = m.attachTags(ctx, tx, data.ID, article.TagIDs)
+		if err != nil {
+			return nil, DetermineDBError(err, "article_attachtags")
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, DetermineDBError(err, "article_create")
+	}
+	data.Timestamp = updateTimestamp
+ 
 	return data, nil
 }
 
