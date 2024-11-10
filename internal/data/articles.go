@@ -22,18 +22,6 @@ type Article struct {
 	PublishedAt time.Time `json:"published_at,omitempty"`
 }
 
-type SavedArticle struct {
-	UserID    string    `json:"user_id"`
-	ArticleID string    `json:"article_id"`
-	SavedAt   time.Time `json:"saved_at"`
-}
-
-type LikedArticle struct {
-	UserID    string `json:"user_id"`
-	ArticleID string `json:"article_id"`
-	LikedAt   string `json:"liked_at"`
-}
-
 type ArticleModel struct {
 	DB *sql.DB
 }
@@ -202,34 +190,33 @@ func (m *ArticleModel) Delete(id string) error {
 	return nil
 }
 
-func (m *ArticleModel) Save(ctx context.Context, article *SavedArticle) (*SavedArticle, error) {
+func (m *ArticleModel) Save(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
 	const query = `
-	INSERT INTO saved_articles 
+	INSERT INTO saved_articles (user_id, article_id)
 	VALUES ($1, $2)
-	RETURNING  user_id, article_id
+	RETURNING article_id || ',' || user_id as combined
 	`
-	savedArticle := &SavedArticle{}
+	data := &ModifiedData{}
 	err := m.DB.QueryRowContext(
 		ctx,
 		query,
-		article,
-		article.UserID,
-		article.ArticleID,
+		userID,
+		articleID,
 	).Scan(
-		&savedArticle.UserID,
-		&savedArticle.ArticleID,
+		&data.ID,
 	)
 	if err != nil {
 		return nil, DetermineDBError(err, "article_save")
 	}
-	return savedArticle, nil
+	data.Timestamp = time.Now().UTC()
+	return data, nil
 }
 
 func (m *ArticleModel) Unsave(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
 	const query = `
 	DELETE FROM saved_articles
 	WHERE user_id = $1 AND article_id = $2
-	RETURNING (user_id, article_id)
+	RETURNING article_id || ',' || user_id as combined
 	`
 	data := &ModifiedData{}
 	err := m.DB.QueryRowContext(
@@ -247,27 +234,26 @@ func (m *ArticleModel) Unsave(ctx context.Context, userID, articleID string) (*M
 	return data, nil
 }
 
-func (m *ArticleModel) Like(ctx context.Context, userID, articleID string) (*LikedArticle, error) {
+func (m *ArticleModel) Like(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
 	const query = `
-	INSERT INTO liked_articles
+	INSERT INTO liked_articles (user_id, article_id)
 	VALUES ($1, $2)
-	RETURNING user_id, article_id, liked_at
+	RETURNING article_id || ',' || user_id as combined
 	`
-	likedArticle := &LikedArticle{}
+	data := &ModifiedData{}
 	err := m.DB.QueryRowContext(
 		ctx,
 		query,
 		userID,
 		articleID,
 	).Scan(
-		&likedArticle.UserID,
-		&likedArticle.ArticleID,
-		&likedArticle.LikedAt,
+		&data.ID,
 	)
 	if err != nil {
 		return nil, DetermineDBError(err, "article_like")
 	}
-	return likedArticle, nil
+	data.Timestamp = time.Now().UTC()
+	return data, nil
 }
 
 func (m *ArticleModel) Unlike(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
@@ -275,7 +261,7 @@ func (m *ArticleModel) Unlike(ctx context.Context, userID, articleID string) (*M
 	DELETE FROM liked_articles
 	WHERE user_id = $1 
 	AND article_id = $2
-	RETURNING id
+	RETURNING article_id || ',' || user_id as combined
 	`
 	data := &ModifiedData{}
 	err := m.DB.QueryRowContext(

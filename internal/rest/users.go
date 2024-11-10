@@ -436,3 +436,5 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 func (api *API) followUserHandler(w http.ResponseWriter, r *http.Request) {
 
 }
+
+func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {}
