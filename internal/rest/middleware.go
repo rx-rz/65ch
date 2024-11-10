@@ -43,7 +43,7 @@ func (api *API) authorizedAccessOnly(next http.HandlerFunc) http.HandlerFunc {
 			api.handleDBError(w, r, err)
 			return
 		}
-		api.contextSetUser(r, user)
+		r = api.contextSetUser(r, user)
 		next.ServeHTTP(w, r)
 	}
 

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
-	"github.com/julienschmidt/httprouter"
 	"github.com/rx-rz/65ch/internal/data"
 	"github.com/rx-rz/65ch/internal/utils"
 	"net/http"
@@ -18,10 +17,7 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/register", api.registerUserHandler)
 	api.router.HandlerFunc(http.MethodPost, "/v1/auth/request-password-reset", api.resetPasswordRequestHandler)
 	api.router.HandlerFunc(http.MethodPatch, "/v1/auth/reset-password", api.resetPasswordHandler)
-	api.router.HandlerFunc(http.MethodGet, "/v1/users/:id", api.authorizedAccessOnly(func(w http.ResponseWriter, r *http.Request) {
-		ps := httprouter.ParamsFromContext(r.Context())
-		api.getUserDetailsHandler(w, r, ps)
-	}))
+	api.router.HandlerFunc(http.MethodGet, "/v1/users/:id", api.authorizedAccessOnly(api.getUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
@@ -156,19 +152,16 @@ type GetUserDetailsRequest struct {
 	ID string `json:"id" validate:"required"`
 }
 
-func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (api *API) getUserDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := api.CreateContext()
 	defer cancel()
 
-	req := GetUserDetailsRequest{
-		ID: ps.ByName("id"),
-	}
-	v := validator.New()
-	if validationError := v.Struct(req); validationError != nil {
-		api.failedValidationResponse(w, validationError)
+	id, err := api.readParam(r, "id")
+	if err != nil {
+		api.badRequestResponse(w, err, "ID parameter not provided")
 		return
 	}
-	user, err := api.models.Users.GetByID(ctx, req.ID)
+	user, err := api.models.Users.GetByID(ctx, id)
 	if err != nil {
 		api.handleDBError(w, r, err)
 		return
