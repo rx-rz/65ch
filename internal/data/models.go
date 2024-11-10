@@ -23,6 +23,7 @@ type Models struct {
 	ResetTokens ResetTokenModel
 	Articles    ArticleModel
 	Tags        TagModel
+	Comments    CommentModel
 	Categories  CategoryModel
 }
 

@@ -22,6 +22,18 @@ type Article struct {
 	PublishedAt time.Time `json:"published_at,omitempty"`
 }
 
+type SavedArticle struct {
+	UserID    string    `json:"user_id"`
+	ArticleID string    `json:"article_id"`
+	SavedAt   time.Time `json:"saved_at"`
+}
+
+type LikedArticle struct {
+	UserID    string `json:"user_id"`
+	ArticleID string `json:"article_id"`
+	LikedAt   string `json:"liked_at"`
+}
+
 type ArticleModel struct {
 	DB *sql.DB
 }
@@ -188,4 +200,96 @@ func (m *ArticleModel) Delete(id string) error {
 		return DetermineDBError(err, "article_delete")
 	}
 	return nil
+}
+
+func (m *ArticleModel) Save(ctx context.Context, article *SavedArticle) (*SavedArticle, error) {
+	const query = `
+	INSERT INTO saved_articles 
+	VALUES ($1, $2)
+	RETURNING  user_id, article_id
+	`
+	savedArticle := &SavedArticle{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		article,
+		article.UserID,
+		article.ArticleID,
+	).Scan(
+		&savedArticle.UserID,
+		&savedArticle.ArticleID,
+	)
+	if err != nil {
+		return nil, DetermineDBError(err, "article_save")
+	}
+	return savedArticle, nil
+}
+
+func (m *ArticleModel) Unsave(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
+	const query = `
+	DELETE FROM saved_articles
+	WHERE user_id = $1 AND article_id = $2
+	RETURNING (user_id, article_id)
+	`
+	data := &ModifiedData{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		userID,
+		articleID,
+	).Scan(
+		&data.ID,
+	)
+	if err != nil {
+		return nil, DetermineDBError(err, "article_unsave")
+	}
+	data.Timestamp = time.Now().UTC()
+	return data, nil
+}
+
+func (m *ArticleModel) Like(ctx context.Context, userID, articleID string) (*LikedArticle, error) {
+	const query = `
+	INSERT INTO liked_articles
+	VALUES ($1, $2)
+	RETURNING user_id, article_id, liked_at
+	`
+	likedArticle := &LikedArticle{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		userID,
+		articleID,
+	).Scan(
+		&likedArticle.UserID,
+		&likedArticle.ArticleID,
+		&likedArticle.LikedAt,
+	)
+	if err != nil {
+		return nil, DetermineDBError(err, "article_like")
+	}
+	return likedArticle, nil
+}
+
+func (m *ArticleModel) Unlike(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
+	const query = `
+	DELETE FROM liked_articles
+	WHERE user_id = $1 
+	AND article_id = $2
+	RETURNING id
+	`
+	data := &ModifiedData{}
+	err := m.DB.QueryRowContext(
+		ctx,
+		query,
+		userID,
+		articleID,
+	).Scan(
+		&data.ID,
+	)
+	data.Timestamp = time.Now().UTC()
+	if err != nil {
+		return nil, DetermineDBError(err, "article_unlike")
+
+	}
+	return data, nil
 }
