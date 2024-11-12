@@ -22,6 +22,7 @@ type CreateArticleRequest struct {
 }
 
 func (api *API) publishArticleHandler(w http.ResponseWriter, r *http.Request) {
+
 	ctx, cancel := api.CreateContext()
 	defer cancel()
 
@@ -133,8 +134,8 @@ func (api *API) createDraftHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) deleteArticleHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := api.CreateContext()
-	defer cancel()
+	//ctx, cancel := api.CreateContext()
+	//defer cancel()
 
 }
 

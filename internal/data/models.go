@@ -24,6 +24,7 @@ type Models struct {
 	Articles    ArticleModel
 	Tags        TagModel
 	Comments    CommentModel
+	Followers   FollowerModel
 	Categories  CategoryModel
 }
 
@@ -108,6 +109,7 @@ func NewModels(db *sql.DB) Models {
 	return Models{
 		Users:       UserModel{DB: db},
 		ResetTokens: ResetTokenModel{DB: db},
+		Followers:   FollowerModel{DB: db},
 		Tags:        TagModel{DB: db},
 		Categories:  CategoryModel{DB: db},
 		Articles:    ArticleModel{DB: db},

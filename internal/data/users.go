@@ -54,7 +54,10 @@ func (m *UserModel) Create(ctx context.Context, user *User) (*User, error) {
 		&newUser.ProfilePicUrl,
 		&newUser.CreatedAt,
 	)
-	return newUser, DetermineDBError(err, "user_create")
+	if err != nil {
+		return nil, DetermineDBError(err, "user_create")
+	}
+	return newUser, nil
 }
 
 func (m *UserModel) GetByEmail(ctx context.Context, email string) (*User, error) {

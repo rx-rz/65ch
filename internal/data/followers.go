@@ -12,35 +12,35 @@ type Follower struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-type FollowersModel struct {
+type FollowerModel struct {
 	DB *sql.DB
 }
 
-func (m *FollowersModel) FollowUser(ctx context.Context, followerID, followedID string) (*Follower, error) {
+func (m *FollowerModel) FollowUser(ctx context.Context, followerID, followedID string) (*Follower, error) {
 
 	const query = `
 	INSERT INTO followers (follower_id, followed_id)
 	VALUES ($1, $2)
-	RETURNING follower_id, followed_id, created_at
+	RETURNING follower_id, followed_id
 	`
-	newFollow := &Follower{}
-	err := m.DB.QueryRowContext(
+	newFollow := &Follower{
+		FollowerID: followerID,
+		FollowedID: followedID,
+	}
+	_, err := m.DB.ExecContext(
 		ctx,
 		query,
 		followerID,
 		followedID,
-	).Scan(
-		&newFollow.FollowerID,
-		&newFollow.FollowedID,
-		&newFollow.CreatedAt,
 	)
+
 	if err != nil {
 		return nil, DetermineDBError(err, "follower_followuser")
 	}
 	return newFollow, nil
 }
 
-func (m *FollowersModel) UnfollowUser(ctx context.Context, followerID, followedID string) error {
+func (m *FollowerModel) UnfollowUser(ctx context.Context, followerID, followedID string) error {
 	const query = `
 	DELETE FROM followers 
 	WHERE follower_id = $1
@@ -58,7 +58,7 @@ func (m *FollowersModel) UnfollowUser(ctx context.Context, followerID, followedI
 	return nil
 }
 
-func (m *FollowersModel) ListFollowers(ctx context.Context, userID string) ([]*Follower, error) {
+func (m *FollowerModel) ListFollowers(ctx context.Context, userID string) ([]*Follower, error) {
 	const query = `
 	SELECT (follower_id, followed_id, created_at) FROM followers
 	WHERE followed_id = $1
@@ -90,7 +90,7 @@ func (m *FollowersModel) ListFollowers(ctx context.Context, userID string) ([]*F
 	return followers, nil
 }
 
-func (m *FollowersModel) ListUsersFollowed(ctx context.Context, userID string) ([]*Follower, error) {
+func (m *FollowerModel) ListUsersFollowed(ctx context.Context, userID string) ([]*Follower, error) {
 	const query = `
 	SELECT (follower_id, followed_id, created_at) FROM followers
 	WHERE follower_id = $1

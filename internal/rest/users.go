@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
@@ -21,6 +22,8 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/follow", api.followUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/unfollow", api.authorizedAccessOnly(api.unfollowUserHandler))
 }
 
 type CreateUserRequest struct {
@@ -426,8 +429,61 @@ func (api *API) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": updateInfo}, "User password reset successfully")
 }
 
-func (api *API) followUserHandler(w http.ResponseWriter, r *http.Request) {
-
+type FollowerRequest struct {
+	FollowerID string `json:"follower_id" validate:"required"`
+	FollowedID string `json:"followed_id" validate:"required"`
 }
 
-func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {}
+func (api *API) followUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
+	var req FollowerRequest
+
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestResponse(w, err, err.Error())
+		return
+	}
+
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, validationError)
+		return
+	}
+
+	if req.FollowerID == req.FollowedID {
+		api.badRequestResponse(w, errors.New("you cannot follow yourself"), "You cannot follow yourself")
+		return
+	}
+	_, err = api.models.Followers.FollowUser(ctx, req.FollowerID, req.FollowedID)
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	api.writeSuccessResponse(w, http.StatusCreated, nil, "User followed successfully")
+}
+
+func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	var req FollowerRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestResponse(w, err, err.Error())
+		return
+	}
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, validationError)
+		return
+	}
+	err = api.models.Followers.UnfollowUser(ctx, req.FollowerID, req.FollowedID)
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	api.writeSuccessResponse(w, http.StatusCreated, nil, "User unfollowed successfully")
+
+}

@@ -9,7 +9,7 @@ import (
 )
 
 func GenerateToken(payload map[string]string, secret string) (string, error) {
-	expirationTime := time.Now().Add(time.Minute * 15).Unix()
+	expirationTime := time.Now().Add(time.Hour * 1500).Unix()
 	claims := jwt.MapClaims{
 		"exp": expirationTime,
 	}
