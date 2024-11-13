@@ -133,4 +133,8 @@ func (api *API) unsaveArticleHandler(w http.ResponseWriter, r *http.Request) {
 	api.writeSuccessResponse(w, http.StatusOK, envelope{"data": info}, "Article unsaved successfully")
 }
 
-func listArticleLikesHandler() {}
+func (api *API) listArticleLikesHandler() {}
+
+func (api *API) viewArticleStatisticsHandler() {}
+
+func (api *API) increaseArticleViewsHandler() {}

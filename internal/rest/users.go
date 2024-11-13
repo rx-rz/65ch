@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
@@ -465,9 +464,9 @@ func (api *API) followUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
-
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := api.CreateContext()
 	defer cancel()
+
 	var req FollowerRequest
 	err := api.readJSON(w, r, &req)
 	if err != nil {
@@ -486,4 +485,11 @@ func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	api.writeSuccessResponse(w, http.StatusCreated, nil, "User unfollowed successfully")
 
+}
+
+func (api *API) deleteUserAccountHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := api.CreateContext()
+	defer cancel()
+
+	user := api.contextGetUser(r)
 }

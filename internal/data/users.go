@@ -202,3 +202,20 @@ func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword strin
 	data.Timestamp = updateTimestamp
 	return data, DetermineDBError(err, "user_updatepassword")
 }
+
+func (m *UserModel) Delete(ctx context.Context, id string) error {
+	const query = `
+	DELETE FROM users
+	WHERE id = $1
+	`
+	_, err := m.DB.ExecContext(
+		ctx,
+		query,
+		id,
+	)
+	if err != nil {
+		return DetermineDBError(err, "user_delete")
+
+	}
+	return nil
+}
