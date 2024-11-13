@@ -204,18 +204,33 @@ func (m *UserModel) UpdatePassword(ctx context.Context, email, newPassword strin
 }
 
 func (m *UserModel) Delete(ctx context.Context, id string) error {
+	tx, err := m.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return DetermineDBError(err, "user_create")
+	}
+	defer tx.Rollback()
+
+	const deleteArticlesQuery = `
+    DELETE FROM articles
+    WHERE author_id = $1
+    `
+	_, err = tx.ExecContext(ctx, deleteArticlesQuery, id)
+	if err != nil {
+		return DetermineDBError(err, "user_delete_articles")
+	}
+
 	const query = `
 	DELETE FROM users
 	WHERE id = $1
 	`
-	_, err := m.DB.ExecContext(
+	_, err = tx.ExecContext(
 		ctx,
 		query,
 		id,
 	)
+	err = tx.Commit()
 	if err != nil {
 		return DetermineDBError(err, "user_delete")
-
 	}
 	return nil
 }

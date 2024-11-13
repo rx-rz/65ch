@@ -19,10 +19,12 @@ func (api *API) initializeUserRoutes() {
 	api.router.HandlerFunc(http.MethodPatch, "/v1/auth/reset-password", api.resetPasswordHandler)
 	api.router.HandlerFunc(http.MethodGet, "/v1/users/:id", api.authorizedAccessOnly(api.getUserDetailsHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me", api.authorizedAccessOnly(api.updateUserDetailsHandler))
+	api.router.HandlerFunc(http.MethodDelete, "/v1/users/me", api.authorizedAccessOnly(api.deleteUserAccountHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/email", api.authorizedAccessOnly(api.updateUserEmailHandler))
 	api.router.HandlerFunc(http.MethodPatch, "/v1/users/me/password", api.authorizedAccessOnly(api.updateUserPasswordHandler))
-	api.router.HandlerFunc(http.MethodPost, "/v1/users/follow", api.followUserHandler)
+	api.router.HandlerFunc(http.MethodPost, "/v1/users/follow", api.authorizedAccessOnly(api.followUserHandler))
 	api.router.HandlerFunc(http.MethodPost, "/v1/users/unfollow", api.authorizedAccessOnly(api.unfollowUserHandler))
+
 }
 
 type CreateUserRequest struct {
@@ -487,9 +489,39 @@ func (api *API) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type DeleteUserRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
 func (api *API) deleteUserAccountHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := api.CreateContext()
 	defer cancel()
 
+	var req DeleteUserRequest
+	err := api.readJSON(w, r, &req)
+	if err != nil {
+		api.badRequestResponse(w, err, err.Error())
+		return
+	}
+
+	v := validator.New()
+	if validationError := v.Struct(req); validationError != nil {
+		api.failedValidationResponse(w, validationError)
+		return
+	}
+
 	user := api.contextGetUser(r)
+	userDetails, _ := api.models.Users.GetByID(ctx, user.ID)
+	matches := utils.CheckPasswordHash(req.Password, userDetails.Password)
+	if !matches {
+		api.badRequestResponse(w, err, "Invalid details provided")
+		return
+	}
+
+	err = api.models.Users.Delete(ctx, user.ID)
+	if err != nil {
+		api.handleDBError(w, r, err)
+		return
+	}
+	api.writeSuccessResponse(w, http.StatusNoContent, nil, "User account deleted successfully")
 }
