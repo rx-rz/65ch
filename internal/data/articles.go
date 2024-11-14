@@ -22,6 +22,12 @@ type Article struct {
 	PublishedAt time.Time `json:"published_at,omitempty"`
 }
 
+type LikedArticle struct {
+	UserID    string    `json:"user_id"`
+	ArticleID string    `json:"article_id"`
+	LikedAt   time.Time `json:"liked_at"`
+}
+
 type ArticleModel struct {
 	DB *sql.DB
 }
@@ -234,26 +240,30 @@ func (m *ArticleModel) Unsave(ctx context.Context, userID, articleID string) (*M
 	return data, nil
 }
 
-func (m *ArticleModel) Like(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
+func (m *ArticleModel) Like(ctx context.Context, userID, articleID string) (*LikedArticle, error) {
+
+	likedArticle := &LikedArticle{}
 	const query = `
 	INSERT INTO liked_articles (user_id, article_id)
 	VALUES ($1, $2)
-	RETURNING article_id || ',' || user_id as combined
+	ON CONFLICT (user_id, article_id) DO NOTHING
+	RETURNING user_id, article_id, liked_at
 	`
-	data := &ModifiedData{}
+
 	err := m.DB.QueryRowContext(
 		ctx,
 		query,
 		userID,
 		articleID,
 	).Scan(
-		&data.ID,
+		&likedArticle.UserID,
+		&likedArticle.ArticleID,
+		&likedArticle.LikedAt,
 	)
 	if err != nil {
 		return nil, DetermineDBError(err, "article_like")
 	}
-	data.Timestamp = time.Now().UTC()
-	return data, nil
+	return likedArticle, nil
 }
 
 func (m *ArticleModel) Unlike(ctx context.Context, userID, articleID string) (*ModifiedData, error) {
